@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.facebook.airlift</groupId>
+        <artifactId>airbase</artifactId>
+        <version>98</version>
+    </parent>
+
+    <groupId>com.facebook.presto</groupId>
+    <artifactId>presto-release-tools</artifactId>
+    <version>0.1-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <name>presto-release-tools</name>
+    <description>Standard utilities to release Presto</description>
+    <url>https://github.com/prestodb/presto-release-tools</url>
+
+    <licenses>
+        <license>
+            <name>Apache License 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <scm>
+        <connection>scm:git:git://github.com/prestodb/presto-release-tools.git</connection>
+        <url>https://github.com/prestodb/presto-release-tools</url>
+        <tag>HEAD</tag>
+    </scm>
+
+    <properties>
+        <air.main.basedir>${project.basedir}</air.main.basedir>
+
+        <air.check.skip-spotbugs>true</air.check.skip-spotbugs>
+        <air.check.skip-pmd>true</air.check.skip-pmd>
+        <air.check.skip-jacoco>true</air.check.skip-jacoco>
+        <air.checkstyle.config-file>src/checkstyle/presto-checks.xml</air.checkstyle.config-file>
+        <air.javadoc.lint>-missing</air.javadoc.lint>
+
+        <dep.airlift.version>0.188</dep.airlift.version>
+        <dep.testng.version>6.10</dep.testng.version>
+        <dep.nexus-staging-plugin.version>1.6.8</dep.nexus-staging-plugin.version>
+    </properties>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-shade-plugin</artifactId>
+                    <version>3.1.1</version>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.skife.maven</groupId>
+                    <artifactId>really-executable-jar-maven-plugin</artifactId>
+                    <version>1.0.5</version>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>exec-maven-plugin</artifactId>
+                    <version>1.6.0</version>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.gaul</groupId>
+                    <artifactId>modernizer-maven-plugin</artifactId>
+                    <configuration>
+                        <violationsFiles>
+                            <violationsFile>${air.main.basedir}/src/modernizer/violations.xml</violationsFile>
+                        </violationsFiles>
+                        <exclusionPatterns>
+                            <exclusionPattern>org/joda/time/.*</exclusionPattern>
+                        </exclusionPatterns>
+                    </configuration>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-release-plugin</artifactId>
+                    <configuration>
+                        <preparationGoals>clean verify -DskipTests</preparationGoals>
+                    </configuration>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.sonatype.plugins</groupId>
+                    <artifactId>nexus-staging-maven-plugin</artifactId>
+                    <version>${dep.nexus-staging-plugin.version}</version>
+                    <extensions>true</extensions>
+                    <configuration>
+                        <serverId>ossrh</serverId>
+                        <nexusUrl>https://oss.sonatype.org/</nexusUrl>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+
+        <plugins>
+            <plugin>
+                <groupId>com.facebook.presto</groupId>
+                <artifactId>presto-maven-plugin</artifactId>
+                <version>0.3</version>
+                <extensions>true</extensions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration combine.children="append">
+                    <includes>
+                        <include>**/Test*.java</include>
+                    </includes>
+                </configuration>
+            </plugin>
+
+            <!-- Always build a jar with the test classes -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <!-- do not build an empty jar if the project is
+                         e.g. a pom project -->
+                    <skipIfEmpty>true</skipIfEmpty>
+                    <archive>
+                        <manifest>
+                            <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                            <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
+                            <addClasspath>false</addClasspath>
+                        </manifest>
+                        <manifestEntries>
+                            <!-- This is actually the time when the build was done -->
+                            <Build-Time>${git.build.time}</Build-Time>
+                            <Git-Commit-Id>${git.commit.id}</Git-Commit-Id>
+                            <Implementation-Version>${project.version}-${git.commit.id.abbrev}</Implementation-Version>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>deploy-to-ossrh</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.sonatype.plugins</groupId>
+                        <artifactId>nexus-staging-maven-plugin</artifactId>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+</project>
