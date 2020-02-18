@@ -59,7 +59,19 @@
 
             <dependency>
                 <groupId>com.facebook.airlift</groupId>
+                <artifactId>http-client</artifactId>
+                <version>${dep.airlift.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.facebook.airlift</groupId>
                 <artifactId>log</artifactId>
+                <version>${dep.airlift.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.facebook.airlift</groupId>
+                <artifactId>json</artifactId>
                 <version>${dep.airlift.version}</version>
             </dependency>
 
