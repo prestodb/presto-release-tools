@@ -41,6 +41,7 @@
         <air.javadoc.lint>-missing</air.javadoc.lint>
 
         <dep.airlift.version>0.188</dep.airlift.version>
+        <dep.packaging.version>${dep.airlift.version}</dep.packaging.version>
         <dep.testng.version>6.10</dep.testng.version>
         <dep.nexus-staging-plugin.version>1.6.8</dep.nexus-staging-plugin.version>
     </properties>
