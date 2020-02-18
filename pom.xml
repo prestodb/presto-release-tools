@@ -9,11 +9,11 @@
     </parent>
 
     <groupId>com.facebook.presto</groupId>
-    <artifactId>presto-release-tools</artifactId>
+    <artifactId>presto-release-tools-root</artifactId>
     <version>0.1-SNAPSHOT</version>
     <packaging>pom</packaging>
 
-    <name>presto-release-tools</name>
+    <name>presto-release-tools-root</name>
     <description>Standard utilities to release Presto</description>
     <url>https://github.com/prestodb/presto-release-tools</url>
 
@@ -44,6 +44,32 @@
         <dep.testng.version>6.10</dep.testng.version>
         <dep.nexus-staging-plugin.version>1.6.8</dep.nexus-staging-plugin.version>
     </properties>
+
+    <modules>
+        <module>presto-release-tools</module>
+    </modules>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>com.facebook.airlift</groupId>
+                <artifactId>configuration</artifactId>
+                <version>${dep.airlift.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.facebook.airlift</groupId>
+                <artifactId>log</artifactId>
+                <version>${dep.airlift.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.facebook.airlift</groupId>
+                <artifactId>testing</artifactId>
+                <version>${dep.airlift.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <build>
         <pluginManagement>
