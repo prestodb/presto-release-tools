@@ -19,8 +19,8 @@ import com.facebook.presto.release.git.GitActor;
 import com.facebook.presto.release.git.GitConfig;
 import com.facebook.presto.release.git.GitRepository;
 import com.facebook.presto.release.git.GitRepositoryConfig;
-import com.facebook.presto.release.git.MockGit;
 import com.facebook.presto.release.git.MockGithubAction;
+import com.facebook.presto.release.git.NoOpGit;
 import com.facebook.presto.release.git.PullRequest;
 import com.facebook.presto.release.git.User;
 import com.google.common.base.Joiner;
@@ -58,6 +58,21 @@ import static org.testng.Assert.assertEquals;
 @Test(singleThreaded = true)
 public class TestGenerateReleaseNotesTask
 {
+    private static class MockGit
+            extends NoOpGit
+    {
+        public MockGit(GitRepository repository)
+        {
+            super(repository);
+        }
+
+        @Override
+        public String log(String revisionRange, String... options)
+        {
+            return "96d1a0420c46ed6a2442a3598dad5e7c9599e9c1\neacf13484139a85c53901f2045578c659a65a5b2";
+        }
+    }
+
     private static final String RESOURCE_DIRECTORY = "release-notes-test";
     private static final String VERSION = "0.231";
     private static final String COMMIT_HASH_PREFIX = Joiner.on("").join(nCopies(30, "a"));
