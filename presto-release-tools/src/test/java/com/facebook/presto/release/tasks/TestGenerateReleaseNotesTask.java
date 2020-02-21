@@ -15,9 +15,10 @@ package com.facebook.presto.release.tasks;
 
 import com.facebook.presto.release.git.Actor;
 import com.facebook.presto.release.git.Commit;
-import com.facebook.presto.release.git.FileRepositoryConfig;
 import com.facebook.presto.release.git.GitActor;
+import com.facebook.presto.release.git.GitConfig;
 import com.facebook.presto.release.git.GitRepository;
+import com.facebook.presto.release.git.GitRepositoryConfig;
 import com.facebook.presto.release.git.MockGit;
 import com.facebook.presto.release.git.MockGithubAction;
 import com.facebook.presto.release.git.PullRequest;
@@ -122,9 +123,10 @@ public class TestGenerateReleaseNotesTask
     {
         this.githubAction = new MockGithubAction(commits);
         return new GenerateReleaseNotesTask(
-                new MockGit(GitRepository.fromFile(
+                new MockGit(GitRepository.create(
                         workingDirectory.getName(),
-                        new FileRepositoryConfig().setDirectory(workingDirectory.getAbsolutePath()))),
+                        new GitRepositoryConfig().setDirectory(workingDirectory.getAbsolutePath()),
+                        new GitConfig())),
                 githubAction,
                 new GenerateReleaseNotesConfig().setVersion(VERSION));
     }

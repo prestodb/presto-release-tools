@@ -40,7 +40,8 @@ public class GitRepositoryModule
     @Override
     public void configure(Binder binder)
     {
-        configBinder(binder).bindConfig(FileRepositoryConfig.class, annotation, repositoryName);
+        configBinder(binder).bindConfig(GitRepositoryConfig.class, annotation, repositoryName);
+
         binder.bind(GitRepository.class).annotatedWith(annotation)
                 .toProvider(new GitRepositoryProvider(annotation, repositoryName))
                 .in(Singleton.class);
@@ -63,8 +64,9 @@ public class GitRepositoryModule
         @Override
         protected GitRepository get(Injector injector, Class<? extends Annotation> annotation)
         {
-            FileRepositoryConfig config = injector.getInstance(Key.get(FileRepositoryConfig.class, annotation));
-            return GitRepository.fromFile(repositoryName, config);
+            GitRepositoryConfig repositoryConfig = injector.getInstance(Key.get(GitRepositoryConfig.class, annotation));
+            GitConfig gitConfig = injector.getInstance(Key.get(GitConfig.class));
+            return GitRepository.create(repositoryName, repositoryConfig, gitConfig);
         }
     }
 
