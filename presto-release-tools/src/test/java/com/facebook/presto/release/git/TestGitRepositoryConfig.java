@@ -22,16 +22,21 @@ import static com.facebook.airlift.configuration.testing.ConfigAssertions.assert
 import static com.facebook.airlift.configuration.testing.ConfigAssertions.assertRecordedDefaults;
 import static com.facebook.airlift.configuration.testing.ConfigAssertions.recordDefaults;
 
-public class TestFileRepositoryConfig
+public class TestGitRepositoryConfig
 {
     @Test
     public void testDefault()
     {
-        assertRecordedDefaults(recordDefaults(FileRepositoryConfig.class)
+        assertRecordedDefaults(recordDefaults(GitRepositoryConfig.class)
                 .setUpstreamName("upstream")
                 .setOriginName("origin")
                 .setDirectory(null)
-                .setCheckDirectoryName(true));
+                .setCheckDirectoryName(true)
+                .setInitializeFromRemote(false)
+                .setUpstreamRepository(null)
+                .setOriginRepository(null)
+                .setProtocol("https")
+                .setAccessToken(null));
     }
 
     @Test
@@ -42,12 +47,22 @@ public class TestFileRepositoryConfig
                 .put("git.origin-name", "o")
                 .put("git.directory", "/tmp/presto")
                 .put("git.check-directory-name", "false")
+                .put("git.initialize-from-remote", "true")
+                .put("git.upstream-repository", "prestodb/presto")
+                .put("git.origin-repository", "user/presto")
+                .put("git.protocol", "ssh")
+                .put("git.access-token", "abc")
                 .build();
-        FileRepositoryConfig expected = new FileRepositoryConfig()
+        GitRepositoryConfig expected = new GitRepositoryConfig()
                 .setUpstreamName("u")
                 .setOriginName("o")
                 .setDirectory("/tmp/presto")
-                .setCheckDirectoryName(false);
+                .setCheckDirectoryName(false)
+                .setInitializeFromRemote(true)
+                .setUpstreamRepository("prestodb/presto")
+                .setOriginRepository("user/presto")
+                .setProtocol("ssh")
+                .setAccessToken("abc");
 
         assertFullMapping(properties, expected);
     }
