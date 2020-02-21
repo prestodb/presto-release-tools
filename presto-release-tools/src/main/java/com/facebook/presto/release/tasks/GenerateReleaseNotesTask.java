@@ -48,6 +48,7 @@ import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 
 import static com.facebook.presto.release.ReleaseUtil.sanitizeRepository;
+import static com.facebook.presto.release.git.Git.RemoteType.ORIGIN;
 import static com.facebook.presto.release.tasks.GenerateReleaseNotesTask.ExtractionStatus.EXPECT_DASHES_OR_RELEASE_NOTE;
 import static com.facebook.presto.release.tasks.GenerateReleaseNotesTask.ExtractionStatus.EXPECT_LINE;
 import static com.facebook.presto.release.tasks.GenerateReleaseNotesTask.ExtractionStatus.EXPECT_SECTION_HEADER;
@@ -158,7 +159,7 @@ public class GenerateReleaseNotesTask
         log.info("Generating release notes pull request");
         String releaseNotesBranch = "release-notes-" + version.getVersion();
         createReleaseNotesCommit(version.getVersion(), releaseNotesBranch, releaseNotes);
-        git.pushOrigin(releaseNotesBranch);
+        git.push(ORIGIN, releaseNotesBranch);
 
         PullRequest releaseNotesPullRequest = githubAction.createPullRequest(releaseNotesBranch, format("Add release notes for %s", version.getVersion()), releaseNotesSummary);
         log.info("Release notes pull request created: %s", releaseNotesPullRequest.getUrl());

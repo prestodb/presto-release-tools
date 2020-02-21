@@ -13,10 +13,17 @@
  */
 package com.facebook.presto.release.git;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface Git
 {
+    enum RemoteType
+    {
+        ORIGIN,
+        UPSTREAM,
+    }
+
     GitRepository getRepository();
 
     void add(String path);
@@ -29,9 +36,13 @@ public interface Git
 
     void fetchUpstream(Optional<String> ref);
 
+    List<String> listUpstreamHeads(String branch);
+
     String log(String revisionRange, String... options);
 
-    void pushOrigin(String branch);
+    void push(RemoteType remoteType, String branch);
 
     String status(String... options);
+
+    List<String> tag();
 }

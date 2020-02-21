@@ -14,7 +14,6 @@
 package com.facebook.presto.release;
 
 import com.facebook.airlift.log.Logger;
-import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.CharStreams;
 
@@ -33,6 +32,7 @@ import static java.lang.Thread.currentThread;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Arrays.asList;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.joining;
 
 public abstract class AbstractCommands
 {
@@ -67,7 +67,7 @@ public abstract class AbstractCommands
 
     public static String command(List<String> command, Map<String, String> environment, File workingDirectory)
     {
-        String commandLine = Joiner.on(" ").join(command);
+        String commandLine = formatCommand(command);
 
         try {
             File logFile = Files.createTempFile("presto-release-log", "").toFile();
@@ -98,6 +98,13 @@ public abstract class AbstractCommands
             currentThread().interrupt();
             throw new RuntimeException(e);
         }
+    }
+
+    public static String formatCommand(List<String> command)
+    {
+        return command.stream()
+                .map(part -> part.contains(" ") ? format("\"%s\"", part) : part)
+                .collect(joining(" "));
     }
 
     private static Optional<String> readFromStream(InputStream stream)

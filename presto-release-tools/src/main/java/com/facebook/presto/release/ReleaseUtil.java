@@ -14,13 +14,19 @@
 package com.facebook.presto.release;
 
 import com.facebook.presto.release.git.Git;
+import com.facebook.presto.release.maven.MavenVersion;
 
+import java.io.File;
+import java.nio.file.Paths;
+import java.util.List;
 import java.util.Optional;
 
 import static com.google.common.base.Preconditions.checkState;
 
 public class ReleaseUtil
 {
+    private static final String RELEASE_BRANCH_PREFIX = "release-";
+
     private ReleaseUtil() {}
 
     /**
@@ -32,5 +38,41 @@ public class ReleaseUtil
         git.checkout(Optional.of("master"), Optional.empty());
         git.fastForwardUpstream("master");
         git.fetchUpstream(Optional.empty());
+    }
+
+    /**
+     * Check for tag validity for the given {@code releaseVersion}.
+     */
+    public static void checkTags(Git git, MavenVersion releaseVersion)
+    {
+        List<String> tags = git.tag();
+        checkState(
+                tags.contains(releaseVersion.getLastVersion().getVersion()),
+                "Release version is [%s], but tag [%s] is not found.",
+                releaseVersion.getVersion(),
+                releaseVersion.getLastVersion().getVersion());
+        checkState(
+                !tags.contains(releaseVersion.getVersion()),
+                "Release version is [%s], but tag [%s] already exists.",
+                releaseVersion.getVersion(),
+                releaseVersion.getVersion());
+    }
+
+    public static File getPomFile(File directory)
+    {
+        File pomFile = Paths.get(directory.getAbsolutePath(), "pom.xml").toFile();
+        checkState(pomFile.exists(), "pom.xml does not exists: %s", pomFile.getAbsolutePath());
+        checkState(!pomFile.isDirectory(), "pom.xml is not a file: %s", pomFile.getAbsolutePath());
+        return pomFile;
+    }
+
+    public static void checkReleaseNotCut(Git git, MavenVersion version)
+    {
+        checkState(git.listUpstreamHeads(getReleaseBranch(version)).isEmpty(), "Release %s is already cut", version.getVersion());
+    }
+
+    public static String getReleaseBranch(MavenVersion version)
+    {
+        return RELEASE_BRANCH_PREFIX + version.getVersion();
     }
 }

@@ -14,15 +14,20 @@
 package com.facebook.presto.release.git;
 
 import com.facebook.presto.release.AbstractCommands;
+import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 import java.io.File;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static com.facebook.presto.release.git.Git.RemoteType.ORIGIN;
+import static com.facebook.presto.release.git.Git.RemoteType.UPSTREAM;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.lang.String.format;
+import static java.lang.System.lineSeparator;
 import static java.util.Arrays.asList;
 import static java.util.Objects.requireNonNull;
 
@@ -30,6 +35,8 @@ public class GitCommands
         extends AbstractCommands
         implements Git
 {
+    private static final Splitter LINE_SPLITTER = Splitter.on(lineSeparator()).trimResults().omitEmptyStrings();
+
     private final GitRepository repository;
 
     public GitCommands(GitRepository repository, GitConfig gitConfig)
@@ -86,6 +93,12 @@ public class GitCommands
     }
 
     @Override
+    public List<String> listUpstreamHeads(String branch)
+    {
+        return LINE_SPLITTER.splitToList(command("ls-remote", "--heads", repository.getUpstreamName(), branch));
+    }
+
+    @Override
     public String log(String revisionRange, String... options)
     {
         return command(ImmutableList.<String>builder()
@@ -93,6 +106,18 @@ public class GitCommands
                 .add(revisionRange)
                 .addAll(asList(options))
                 .build());
+    }
+
+    @Override
+    public void push(RemoteType remoteType, String branch)
+    {
+        checkArgument(remoteType == ORIGIN || remoteType == UPSTREAM, "Unsupported remote type: %s", remoteType);
+        ImmutableList.Builder<String> arguments = ImmutableList.<String>builder()
+                .add("push")
+                .add(remoteType == ORIGIN ? repository.getOriginName() : repository.getUpstreamName())
+                .add("-u")
+                .add(format("%s:%s", branch, branch));
+        command(arguments.build());
     }
 
     @Override
@@ -105,9 +130,9 @@ public class GitCommands
     }
 
     @Override
-    public void pushOrigin(String branch)
+    public List<String> tag()
     {
-        command("push", repository.getOriginName(), "-u", branch + ":" + branch, "-f");
+        return LINE_SPLITTER.splitToList(command("tag"));
     }
 
     public static Map<String, String> getEnvironment(Optional<File> sshKeyFile)
