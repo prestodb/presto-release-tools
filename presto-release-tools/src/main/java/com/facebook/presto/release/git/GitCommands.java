@@ -77,6 +77,12 @@ public class GitCommands
     }
 
     @Override
+    public void deleteBranch(String branch)
+    {
+        command("branch", "-D", branch);
+    }
+
+    @Override
     public void fastForwardUpstream(String ref)
     {
         command("pull", "--ff-only", repository.getUpstreamName(), ref);
@@ -109,7 +115,7 @@ public class GitCommands
     }
 
     @Override
-    public void push(RemoteType remoteType, String branch)
+    public void push(RemoteType remoteType, String branch, boolean tags)
     {
         checkArgument(remoteType == ORIGIN || remoteType == UPSTREAM, "Unsupported remote type: %s", remoteType);
         ImmutableList.Builder<String> arguments = ImmutableList.<String>builder()
@@ -117,6 +123,9 @@ public class GitCommands
                 .add(remoteType == ORIGIN ? repository.getOriginName() : repository.getUpstreamName())
                 .add("-u")
                 .add(format("%s:%s", branch, branch));
+        if (tags) {
+            arguments.add("--tags");
+        }
         command(arguments.build());
     }
 

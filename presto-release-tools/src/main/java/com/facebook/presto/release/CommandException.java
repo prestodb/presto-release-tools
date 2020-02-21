@@ -11,13 +11,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.facebook.presto.release.maven;
+package com.facebook.presto.release;
 
-public interface Maven
+public class CommandException
+        extends RuntimeException
 {
-    void setVersions(String version);
-
-    void releasePrepare(String releaseVersion, String developmentVersion, String tag);
-
-    void releaseClean();
+    public CommandException(int exitCode)
+    {
+        super("Command failed with exit code " + exitCode);
+    }
 }

@@ -47,10 +47,10 @@ public class ReleaseUtil
     {
         List<String> tags = git.tag();
         checkState(
-                tags.contains(releaseVersion.getLastVersion().getVersion()),
+                tags.contains(releaseVersion.getLastMajorVersion().getVersion()),
                 "Release version is [%s], but tag [%s] is not found.",
                 releaseVersion.getVersion(),
-                releaseVersion.getLastVersion().getVersion());
+                releaseVersion.getLastMajorVersion().getVersion());
         checkState(
                 !tags.contains(releaseVersion.getVersion()),
                 "Release version is [%s], but tag [%s] already exists.",
@@ -64,6 +64,11 @@ public class ReleaseUtil
         checkState(pomFile.exists(), "pom.xml does not exists: %s", pomFile.getAbsolutePath());
         checkState(!pomFile.isDirectory(), "pom.xml is not a file: %s", pomFile.getAbsolutePath());
         return pomFile;
+    }
+
+    public static void checkReleaseCut(Git git, MavenVersion version)
+    {
+        checkState(!git.listUpstreamHeads(getReleaseBranch(version)).isEmpty(), "Release %s has not been cut", version.getVersion());
     }
 
     public static void checkReleaseNotCut(Git git, MavenVersion version)

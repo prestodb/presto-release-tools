@@ -107,9 +107,9 @@ public class GenerateReleaseNotesTask
     public void run()
     {
         sanitizeRepository(git);
-        MavenVersion version = this.version.orElseGet(() -> MavenVersion.fromDirectory(repository.getDirectory()).getLastVersion());
+        MavenVersion version = this.version.orElseGet(() -> MavenVersion.fromDirectory(repository.getDirectory()).getLastMajorVersion());
 
-        log.info("Release version: %s, Last Version: %s", version.getVersion(), version.getLastVersion().getVersion());
+        log.info("Release version: %s, Last Version: %s", version.getVersion(), version.getLastMajorVersion().getVersion());
         List<String> commitIds = Splitter.on("\n")
                 .trimResults()
                 .omitEmptyStrings()
@@ -117,7 +117,7 @@ public class GenerateReleaseNotesTask
                         format(
                                 "%s/release-%s..%s/release-%s",
                                 repository.getUpstreamName(),
-                                version.getLastVersion().getVersion(),
+                                version.getLastMajorVersion().getVersion(),
                                 repository.getUpstreamName(),
                                 version.getVersion()),
                         "--format=%H",
@@ -159,7 +159,7 @@ public class GenerateReleaseNotesTask
         log.info("Generating release notes pull request");
         String releaseNotesBranch = "release-notes-" + version.getVersion();
         createReleaseNotesCommit(version.getVersion(), releaseNotesBranch, releaseNotes);
-        git.push(ORIGIN, releaseNotesBranch);
+        git.push(ORIGIN, releaseNotesBranch, false);
 
         PullRequest releaseNotesPullRequest = githubAction.createPullRequest(releaseNotesBranch, format("Add release notes for %s", version.getVersion()), releaseNotesSummary);
         log.info("Release notes pull request created: %s", releaseNotesPullRequest.getUrl());
