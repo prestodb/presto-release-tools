@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Paths;
 import java.util.Map;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -32,12 +33,16 @@ public class MavenVersion
 {
     private static final Pattern RELEASE_VERSION_PATTERN = Pattern.compile("0\\.([1-9][0-9]*)");
     private static final Pattern SNAPSHOT_VERSION_PATTERN = Pattern.compile("0\\.([1-9][0-9]*)-SNAPSHOT");
-    private final int versionNumber;
 
-    private MavenVersion(int versionNumber)
+    private final int versionNumber;
+    private final Optional<Integer> minorVersionNumber;
+
+    private MavenVersion(int versionNumber, Optional<Integer> minorVersionNumber)
     {
         checkArgument(versionNumber > 0, "Expect positive version number, found: %s", versionNumber);
+        checkArgument(!minorVersionNumber.isPresent() || minorVersionNumber.get() > 0, "Expect positive minor version number, found: %s", minorVersionNumber.orElse(null));
         this.versionNumber = versionNumber;
+        this.minorVersionNumber = minorVersionNumber;
     }
 
     public static MavenVersion fromDirectory(File directory)
@@ -63,33 +68,43 @@ public class MavenVersion
     {
         Matcher matcher = RELEASE_VERSION_PATTERN.matcher(version);
         checkArgument(matcher.matches(), "Invalid release version: %s", version);
-        return new MavenVersion(parseInt(matcher.group(1)));
+        return new MavenVersion(parseInt(matcher.group(1)), Optional.empty());
     }
 
     public static MavenVersion fromSnapshotVersion(String version)
     {
         Matcher matcher = SNAPSHOT_VERSION_PATTERN.matcher(version);
         checkArgument(matcher.matches(), "Invalid snapshot version: %s", version);
-        return new MavenVersion(parseInt(matcher.group(1)));
+        return new MavenVersion(parseInt(matcher.group(1)), Optional.empty());
     }
 
-    public MavenVersion getLastVersion()
+    public MavenVersion getLastMajorVersion()
     {
-        return new MavenVersion(versionNumber - 1);
+        return new MavenVersion(versionNumber - 1, Optional.empty());
     }
 
-    public MavenVersion getNextVersion()
+    public MavenVersion getNextMajorVersion()
     {
-        return new MavenVersion(versionNumber + 1);
+        return new MavenVersion(versionNumber + 1, Optional.empty());
+    }
+
+    public MavenVersion getNextMinorVersion()
+    {
+        return new MavenVersion(versionNumber, Optional.of(minorVersionNumber.orElse(0) + 1));
     }
 
     public String getVersion()
     {
-        return format("0.%s", versionNumber);
+        return format("0.%s%s", versionNumber, getMinorSuffix());
     }
 
     public String getSnapshotVersion()
     {
-        return format("0.%s-SNAPSHOT", versionNumber);
+        return format("0.%s%s-SNAPSHOT", versionNumber, getMinorSuffix());
+    }
+
+    private String getMinorSuffix()
+    {
+        return minorVersionNumber.map(version -> "." + version).orElse("");
     }
 }

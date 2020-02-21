@@ -32,6 +32,8 @@ public interface Git
 
     void commit(String commitTitle);
 
+    void deleteBranch(String branch);
+
     void fastForwardUpstream(String ref);
 
     void fetchUpstream(Optional<String> ref);
@@ -40,7 +42,7 @@ public interface Git
 
     String log(String revisionRange, String... options);
 
-    void push(RemoteType remoteType, String branch);
+    void push(RemoteType remoteType, String branch, boolean tags);
 
     String status(String... options);
 

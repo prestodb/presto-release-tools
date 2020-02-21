@@ -37,6 +37,35 @@ To cut a release with a new clone:
 --git-initialize-from-remote true --upstream-repo prestodb/presto
 ```
 
+
+## Finalize Release
+
+The ``finalize-release`` command performs the following actions:
+- Check that there is no uncommitted local changes.
+- Checkout and fast-forward ``master`` branch.
+- Fetch ``upstream``, including tags.
+- Determine the release version.
+- Check that the git tag of last version exists.
+- Check that the git tag of the release version doesn't exist.
+- Check that the release is cut, that is, the release branch exists.
+- Delete the local release branch if exists.
+- Checkout the release branch from ``upstream``. 
+- Perform custom updates to the root ``pom.xml`` file.
+- Run maven commands to prepare the release.
+- Push changes to the release branch on ``upstream``.
+
+To finalize a release from a local repo:
+```
+/tmp/presto_release finalize-release --directory /path/to/presto
+```
+
+To finalize a release with a new clone:
+```
+/tmp/presto_release finalize-release --directory /path/to/new/presto \
+--git-initialize-from-remote true --upstream-repo prestodb/presto
+```
+
+
 ## Generate Release Notes
 To collect and generate release notes:
 ```

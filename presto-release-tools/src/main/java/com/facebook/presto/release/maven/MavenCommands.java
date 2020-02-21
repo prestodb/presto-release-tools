@@ -32,4 +32,21 @@ public class MavenCommands
     {
         command("versions:set", "-DnewVersion=" + version);
     }
+
+    @Override
+    public void releasePrepare(String releaseVersion, String developmentVersion, String tag)
+    {
+        command(
+                "release:prepare",
+                "-T1C",
+                "-DreleaseVersion=" + releaseVersion,
+                "-DdevelopmentVersion=" + developmentVersion,
+                "-Dtag=" + tag);
+    }
+
+    @Override
+    public void releaseClean()
+    {
+        command("release:clean");
+    }
 }

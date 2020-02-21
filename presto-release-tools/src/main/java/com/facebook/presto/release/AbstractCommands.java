@@ -82,7 +82,7 @@ public abstract class AbstractCommands
 
             if (process.exitValue() != 0) {
                 readFromStream(process.getErrorStream()).ifPresent(log::error);
-                throw new RuntimeException("Command failed");
+                throw new CommandException(process.exitValue());
             }
 
             process.destroy();

@@ -14,6 +14,7 @@
 package com.facebook.presto.release.tasks;
 
 import com.facebook.airlift.log.Logger;
+import com.facebook.presto.release.CommandException;
 import com.facebook.presto.release.git.Git;
 import com.facebook.presto.release.git.GitRepository;
 import com.facebook.presto.release.maven.Maven;
@@ -22,15 +23,16 @@ import com.facebook.presto.release.maven.MavenVersion;
 import java.io.File;
 import java.util.Optional;
 
-import static com.facebook.presto.release.ReleaseUtil.checkReleaseNotCut;
+import static com.facebook.presto.release.ReleaseUtil.checkReleaseCut;
 import static com.facebook.presto.release.ReleaseUtil.checkTags;
 import static com.facebook.presto.release.ReleaseUtil.getPomFile;
+import static com.facebook.presto.release.ReleaseUtil.getReleaseBranch;
 import static com.facebook.presto.release.ReleaseUtil.sanitizeRepository;
 import static com.facebook.presto.release.git.Git.RemoteType.UPSTREAM;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
-public abstract class AbstractCutReleaseTask
+public abstract class AbstractFinalizeReleaseTask
         implements ReleaseTask
 {
     private static final Logger log = Logger.get(AbstractCutReleaseTask.class);
@@ -39,11 +41,16 @@ public abstract class AbstractCutReleaseTask
     private final GitRepository repository;
     private final Maven maven;
 
-    public AbstractCutReleaseTask(Git git, Maven maven)
+    public AbstractFinalizeReleaseTask(Git git, Maven maven)
     {
         this.git = requireNonNull(git, "git is null");
         this.repository = requireNonNull(git.getRepository(), "repository is null");
         this.maven = requireNonNull(maven, "maven is null");
+    }
+
+    protected Git getGit()
+    {
+        return git;
     }
 
     /**
@@ -55,21 +62,24 @@ public abstract class AbstractCutReleaseTask
     public void run()
     {
         sanitizeRepository(git);
-        MavenVersion version = MavenVersion.fromDirectory(repository.getDirectory());
+        MavenVersion version = MavenVersion.fromDirectory(repository.getDirectory()).getLastMajorVersion();
         checkTags(git, version);
-        checkReleaseNotCut(git, version);
+        checkReleaseCut(git, version);
+
+        String releaseBranch = getReleaseBranch(version);
+        try {
+            git.deleteBranch(releaseBranch);
+        }
+        catch (CommandException e) {
+            // ignore
+        }
+        git.checkout(Optional.of(format("%s/%s", repository.getUpstreamName(), releaseBranch)), Optional.of(releaseBranch));
 
         updatePom(getPomFile(repository.getDirectory()), version);
 
-        String snapshotVersion = version.getNextMajorVersion().getSnapshotVersion();
-        maven.setVersions(snapshotVersion);
-        git.add(".");
-        git.commit(format("Prepare for next development iteration - %s", snapshotVersion));
-        git.push(UPSTREAM, "master", false);
-
-        String releaseBranch = "release-" + version.getVersion();
-        git.checkout(Optional.of("HEAD~1"), Optional.of(releaseBranch));
-        git.push(UPSTREAM, releaseBranch, false);
-        log.info("Release branch created: %s", releaseBranch);
+        maven.releasePrepare(version.getVersion(), version.getNextMinorVersion().getSnapshotVersion(), version.getVersion());
+        maven.releaseClean();
+        git.push(UPSTREAM, releaseBranch, true);
+        log.info("Release finalized: %s", version.getVersion());
     }
 }

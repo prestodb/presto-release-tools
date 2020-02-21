@@ -14,6 +14,7 @@
 package com.facebook.presto.release;
 
 import com.facebook.presto.release.tasks.CutReleaseCommand;
+import com.facebook.presto.release.tasks.FinalizeReleaseCommand;
 import com.facebook.presto.release.tasks.GenerateReleaseNotesCommand;
 import io.airlift.airline.Cli;
 import io.airlift.airline.Help;
@@ -32,6 +33,7 @@ public class PrestoReleaseService
                 .withCommand(Help.class)
                 .withCommand(GenerateReleaseNotesCommand.class)
                 .withCommand(CutReleaseCommand.class)
+                .withCommand(FinalizeReleaseCommand.class)
                 .build();
         parser.parse(args).run();
     }

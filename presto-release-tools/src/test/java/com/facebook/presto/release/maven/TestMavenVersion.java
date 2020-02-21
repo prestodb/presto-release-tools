@@ -69,4 +69,27 @@ public class TestMavenVersion
         File pomFile = new File(Resources.getResource("pom.xml").getFile()).getParentFile();
         assertEquals(fromDirectory(pomFile).getVersion(), "0.232");
     }
+
+    @Test
+    public void testVersionChange()
+    {
+        MavenVersion version = fromReleaseVersion("0.230");
+
+        MavenVersion lastMajor = version.getLastMajorVersion();
+        assertEquals(lastMajor.getVersion(), "0.229");
+        assertEquals(lastMajor.getSnapshotVersion(), "0.229-SNAPSHOT");
+
+        String nextMajor = version.getNextMajorVersion().getVersion();
+        assertEquals(nextMajor, "0.231");
+        assertEquals(version.getNextMajorVersion().getSnapshotVersion(), "0.231-SNAPSHOT");
+
+        MavenVersion nextMinor = version.getNextMinorVersion();
+        assertEquals(nextMinor.getVersion(), "0.230.1");
+        assertEquals(nextMinor.getSnapshotVersion(), "0.230.1-SNAPSHOT");
+
+        assertEquals(nextMinor.getNextMajorVersion().getVersion(), "0.231");
+        assertEquals(nextMinor.getNextMajorVersion().getSnapshotVersion(), "0.231-SNAPSHOT");
+        assertEquals(nextMinor.getNextMinorVersion().getVersion(), "0.230.2");
+        assertEquals(nextMinor.getNextMinorVersion().getSnapshotVersion(), "0.230.2-SNAPSHOT");
+    }
 }
