@@ -14,12 +14,18 @@
 package com.facebook.presto.release.maven;
 
 import com.facebook.airlift.configuration.Config;
+import com.facebook.airlift.configuration.ConfigDescription;
+import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableList;
 
 import javax.validation.constraints.NotNull;
+
+import java.util.List;
 
 public class MavenConfig
 {
     private String executable = "mvn";
+    private List<String> options = ImmutableList.of();
 
     @NotNull
     public String getExecutable()
@@ -31,6 +37,22 @@ public class MavenConfig
     public MavenConfig setExecutable(String executable)
     {
         this.executable = executable;
+        return this;
+    }
+
+    @NotNull
+    public List<String> getOptions()
+    {
+        return options;
+    }
+
+    @Config("maven.options")
+    @ConfigDescription("A comma-separated list of command line options for mvn")
+    public MavenConfig setOptions(String options)
+    {
+        if (options != null) {
+            this.options = ImmutableList.copyOf(Splitter.on(",").splitToList(options));
+        }
         return this;
     }
 }
