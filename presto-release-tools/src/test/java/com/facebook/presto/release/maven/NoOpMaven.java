@@ -34,7 +34,7 @@ public class NoOpMaven
     @Override
     protected String command(List<String> arguments)
     {
-        commandLogger.log("git", arguments);
+        commandLogger.log("mvn", arguments);
         return "";
     }
 }

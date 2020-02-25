@@ -112,7 +112,7 @@ public class GitRepositoryConfig
     }
 
     @Config("git.upstream-repository")
-    @ConfigDescription("Upstream repository name in the format of <USER/ORGANIZATION>/<REPO>. i.e. prestodb/presto")
+    @ConfigDescription("Repository name for upstream in the format of <USER_OR_ORGANIZATION>/<REPO>, e.g. prestodb/presto.")
     public GitRepositoryConfig setUpstreamRepository(String upstreamRepository)
     {
         this.upstreamRepository = Optional.ofNullable(upstreamRepository);
@@ -126,7 +126,7 @@ public class GitRepositoryConfig
     }
 
     @Config("git.origin-repository")
-    @ConfigDescription("Origin repository name in the format of <USER/ORGANIZATION>/<REPO>. i.e. user/presto")
+    @ConfigDescription("Repository name for origin in the format of <USER_OR_ORGANIZATION>/<REPO>, e.g. user/presto.")
     public GitRepositoryConfig setOriginRepository(String originRepository)
     {
         this.originRepository = Optional.ofNullable(originRepository);

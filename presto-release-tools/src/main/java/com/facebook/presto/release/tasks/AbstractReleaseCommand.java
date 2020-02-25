@@ -20,12 +20,15 @@ import com.google.inject.Injector;
 import com.google.inject.Module;
 import io.airlift.airline.Option;
 
+import javax.inject.Inject;
+
 import java.lang.reflect.Field;
 import java.util.List;
 
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.google.common.base.Throwables.throwIfUnchecked;
+import static java.lang.System.setProperty;
 
 public abstract class AbstractReleaseCommand
         implements Runnable
@@ -64,25 +67,42 @@ public abstract class AbstractReleaseCommand
 
     private void setConfigPropertiesFromOptions()
     {
-        for (Field field : getClass().getDeclaredFields()) {
-            Option option = field.getAnnotation(Option.class);
-            if (option == null) {
-                continue;
-            }
+        setConfigPropertiesFromOptions(this);
+    }
 
-            ConfigProperty configProperty = field.getAnnotation(ConfigProperty.class);
-            checkState(configProperty != null, "@ConfigProperty annotation is required on fields annotated with @Option");
-            checkState(!isNullOrEmpty(configProperty.value()), "@ConfigProperty value is not or empty");
+    private static void setConfigPropertiesFromOptions(Object object)
+    {
+        for (Class<?> clazz = object.getClass(); !Object.class.equals(clazz); clazz = clazz.getSuperclass()) {
+            for (Field field : clazz.getDeclaredFields()) {
+                Inject inject = field.getAnnotation(Inject.class);
+                if (inject != null) {
+                    setConfigPropertiesFromOptions(getField(object, field));
+                }
 
-            try {
-                Object value = field.get(this);
+                Option option = field.getAnnotation(Option.class);
+                if (option == null) {
+                    continue;
+                }
+
+                ConfigProperty configProperty = field.getAnnotation(ConfigProperty.class);
+                checkState(configProperty != null, "@ConfigProperty annotation is required on fields annotated with @Option");
+                checkState(!isNullOrEmpty(configProperty.value()), "@ConfigProperty value is not or empty");
+
+                Object value = getField(object, field);
                 if (option.required() || value != null) {
-                    System.setProperty(configProperty.value(), value.toString());
+                    setProperty(configProperty.value(), value.toString());
                 }
             }
-            catch (IllegalAccessException e) {
-                throw new RuntimeException(e);
-            }
+        }
+    }
+
+    private static Object getField(Object object, Field field)
+    {
+        try {
+            return field.get(object);
+        }
+        catch (IllegalAccessException e) {
+            throw new RuntimeException(e);
         }
     }
 }
