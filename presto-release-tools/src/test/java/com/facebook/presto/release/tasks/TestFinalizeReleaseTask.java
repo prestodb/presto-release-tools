@@ -101,7 +101,7 @@ public class TestFinalizeReleaseTask
                         "git ls-remote --heads upstream release-0.231",
                         "git branch -D release-0.231",
                         "git checkout -b release-0.231 upstream/release-0.231",
-                        "mvn release:prepare -T1C -DreleaseVersion=0.231 -DdevelopmentVersion=0.231.1-SNAPSHOT -Dtag=0.231",
+                        "mvn release:prepare -DreleaseVersion=0.231 -DdevelopmentVersion=0.231.1-SNAPSHOT -Dtag=0.231",
                         "mvn release:clean",
                         "git push upstream -u release-0.231:release-0.231 --tags"));
     }

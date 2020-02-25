@@ -14,31 +14,37 @@
 package com.facebook.presto.release.maven;
 
 import com.facebook.presto.release.AbstractCommands;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 import java.io.File;
+import java.util.List;
+
+import static java.util.Arrays.asList;
 
 public class MavenCommands
         extends AbstractCommands
         implements Maven
 {
+    private final List<String> options;
+
     public MavenCommands(MavenConfig mavenConfig, File directory)
     {
         super(mavenConfig.getExecutable(), ImmutableMap.of(), directory);
+        this.options = ImmutableList.copyOf(mavenConfig.getOptions());
     }
 
     @Override
     public void setVersions(String version)
     {
-        command("versions:set", "-DnewVersion=" + version);
+        commandWithOptions("versions:set", "-DnewVersion=" + version);
     }
 
     @Override
     public void releasePrepare(String releaseVersion, String developmentVersion, String tag)
     {
-        command(
+        commandWithOptions(
                 "release:prepare",
-                "-T1C",
                 "-DreleaseVersion=" + releaseVersion,
                 "-DdevelopmentVersion=" + developmentVersion,
                 "-Dtag=" + tag);
@@ -47,6 +53,14 @@ public class MavenCommands
     @Override
     public void releaseClean()
     {
-        command("release:clean");
+        commandWithOptions("release:clean");
+    }
+
+    private String commandWithOptions(String... arguments)
+    {
+        return command(ImmutableList.<String>builder()
+                .addAll(options)
+                .addAll(asList(arguments))
+                .build());
     }
 }

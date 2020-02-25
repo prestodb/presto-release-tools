@@ -28,7 +28,8 @@ public class TestMavenConfig
     public void testDefault()
     {
         assertRecordedDefaults(recordDefaults(MavenConfig.class)
-                .setExecutable("mvn"));
+                .setExecutable("mvn")
+                .setOptions(null));
     }
 
     @Test
@@ -36,9 +37,11 @@ public class TestMavenConfig
     {
         Map<String, String> properties = new ImmutableMap.Builder<String, String>()
                 .put("maven.executable", "/bin/mvn")
+                .put("maven.options", "-Djava.net.preferIPv6Addresses,--settings=/Users/root/.m2/settings.xml")
                 .build();
         MavenConfig expected = new MavenConfig()
-                .setExecutable("/bin/mvn");
+                .setExecutable("/bin/mvn")
+                .setOptions("-Djava.net.preferIPv6Addresses,--settings=/Users/root/.m2/settings.xml");
 
         assertFullMapping(properties, expected);
     }

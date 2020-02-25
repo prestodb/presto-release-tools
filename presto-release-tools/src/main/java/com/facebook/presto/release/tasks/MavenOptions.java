@@ -20,4 +20,8 @@ public class MavenOptions
     @Option(name = "--maven-executable", title = "executable", description = "Maven executable")
     @ConfigProperty("maven.executable")
     public String executable;
+
+    @Option(name = "--maven-options", title = "options", description = "Maven options")
+    @ConfigProperty("maven.options")
+    public String options;
 }
