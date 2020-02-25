@@ -22,47 +22,29 @@ import com.google.inject.Module;
 import io.airlift.airline.Command;
 import io.airlift.airline.Option;
 
+import javax.inject.Inject;
+
 import java.util.List;
 
 @Command(name = "release-notes", description = "Presto release notes generator")
 public class GenerateReleaseNotesCommand
         extends AbstractReleaseCommand
 {
-    @Option(name = "--github-user", title = "Github username", required = true)
-    @ConfigProperty("github.user")
-    public String githubUser;
-
-    @Option(name = "--github-access-token", title = "Github Personal Access Token", required = true)
-    @ConfigProperty("github.access-token")
-    public String githubAccessToken;
-
     @Option(name = "--version", title = "Release version")
     @ConfigProperty("release-notes.version")
     public String version;
 
-    @Option(name = "--upstream-name", title = "Presto repo upstream name")
-    @ConfigProperty("presto.git.upstream-name")
-    public String gitUpstreamName;
+    @Inject
+    public PrestoRepositoryOptions repositoryOptions = new PrestoRepositoryOptions();
 
-    @Option(name = "--origin-name", title = "Presto repo origin name")
-    @ConfigProperty("presto.git.origin-name")
-    public String gitOriginName;
+    @Inject
+    public GitOptions gitOptions = new GitOptions();
 
-    @Option(name = "--directory", title = "Presto repo directory")
-    @ConfigProperty("presto.git.directory")
-    public String gitDirectory;
+    @Inject
+    public MavenOptions mavenOptions = new MavenOptions();
 
-    @Option(name = "--check-directory-name", title = "Check whether the git directory name is presto")
-    @ConfigProperty("presto.git.check-directory-name")
-    public String gitCheckDirectoryName;
-
-    @Option(name = "--git-executable", title = "Git executable")
-    @ConfigProperty("git.executable")
-    public String gitExecutable;
-
-    @Option(name = "--git-ssh-key-file", title = "Git SSH key file")
-    @ConfigProperty("git.ssh-key-file")
-    public String gitSshKeyFile;
+    @Inject
+    public GithubOptions githubOptions = new GithubOptions();
 
     @Override
     protected List<Module> getModules()

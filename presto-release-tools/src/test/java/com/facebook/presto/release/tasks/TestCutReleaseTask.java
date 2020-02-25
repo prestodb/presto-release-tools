@@ -91,7 +91,7 @@ public class TestCutReleaseTask
                         "git fetch upstream",
                         "git tag",
                         "git ls-remote --heads upstream release-0.232",
-                        "git versions:set -DnewVersion=0.233-SNAPSHOT",
+                        "mvn versions:set -DnewVersion=0.233-SNAPSHOT",
                         "git add .",
                         "git commit -m \"Prepare for next development iteration - 0.233-SNAPSHOT\"",
                         "git push upstream -u master:master",

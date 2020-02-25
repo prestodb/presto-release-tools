@@ -22,7 +22,7 @@ import static com.facebook.airlift.configuration.testing.ConfigAssertions.assert
 import static com.facebook.airlift.configuration.testing.ConfigAssertions.assertRecordedDefaults;
 import static com.facebook.airlift.configuration.testing.ConfigAssertions.recordDefaults;
 
-public class TestMavenCommands
+public class TestMavenConfig
 {
     @Test
     public void testDefault()

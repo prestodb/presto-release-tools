@@ -20,7 +20,8 @@ import com.facebook.presto.release.maven.MavenModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Module;
 import io.airlift.airline.Command;
-import io.airlift.airline.Option;
+
+import javax.inject.Inject;
 
 import java.util.List;
 
@@ -28,53 +29,14 @@ import java.util.List;
 public class CutReleaseCommand
         extends AbstractReleaseCommand
 {
-    @Option(name = "--upstream-name", title = "Presto repository upstream name")
-    @ConfigProperty("presto.git.upstream-name")
-    public String gitUpstreamName;
+    @Inject
+    public PrestoRepositoryOptions repositoryOptions = new PrestoRepositoryOptions();
 
-    @Option(name = "--origin-name", title = "Presto repository origin name")
-    @ConfigProperty("presto.git.origin-name")
-    public String gitOriginName;
+    @Inject
+    public GitOptions gitOptions = new GitOptions();
 
-    @Option(name = "--directory", title = "Presto repository directory")
-    @ConfigProperty("presto.git.directory")
-    public String gitDirectory;
-
-    @Option(name = "--check-directory-name", title = "Check whether the git directory name is presto")
-    @ConfigProperty("presto.git.check-directory-name")
-    public String gitCheckDirectoryName;
-
-    @Option(name = "--git-initialize-from-remote", title = "Initialize the local repository from remote")
-    @ConfigProperty("presto.git.initialize-from-remote")
-    public String gitInitializeFromRemote;
-
-    @Option(name = "--upstream-repo", title = "Upstream repository name", description = "Format: <USER/ORGANIZATION>/<REPO>. i.e. prestodb/presto")
-    @ConfigProperty("presto.git.upstream-repository")
-    public String upstreamRepository;
-
-    @Option(name = "--origin-repo", title = "Origin repository name", description = "Format: <USER/ORGANIZATION>/<REPO>. i.e. user/presto")
-    @ConfigProperty("presto.git.origin-repository")
-    public String originRepository;
-
-    @Option(name = "--protocol", title = "Git protocol")
-    @ConfigProperty("presto.git.protocol")
-    public String gitProtocol;
-
-    @Option(name = "--access-token", title = "Github personal access token")
-    @ConfigProperty("presto.git.access-token")
-    public String gitAccessToken;
-
-    @Option(name = "--git-executable", title = "Git executable")
-    @ConfigProperty("git.executable")
-    public String gitExecutable;
-
-    @Option(name = "--git-ssh-key-file", title = "Git SSH key file")
-    @ConfigProperty("git.ssh-key-file")
-    public String gitSshKeyFile;
-
-    @Option(name = "--maven-executable", title = "Maven executable")
-    @ConfigProperty("maven.executable")
-    public String mavenExecutable;
+    @Inject
+    public MavenOptions mavenOptions = new MavenOptions();
 
     @Override
     protected List<Module> getModules()
