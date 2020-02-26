@@ -21,6 +21,7 @@ import com.facebook.presto.release.git.NoOpGit;
 import com.facebook.presto.release.maven.NoOpMaven;
 import com.google.common.collect.ImmutableList;
 import org.testng.annotations.AfterClass;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.io.File;
@@ -54,22 +55,19 @@ public class TestCutReleaseTask
     }
 
     private final File workingDirectory;
-    private final CutReleaseTask task;
-    private final CommandLogger commandLogger = new CommandLogger();
+    private CommandLogger commandLogger;
 
     public TestCutReleaseTask()
             throws IOException
     {
         this.workingDirectory = createTempDir();
-        this.task = new CutReleaseTask(
-                new MockGit(
-                        GitRepository.create(
-                                workingDirectory.getName(),
-                                new GitRepositoryConfig().setDirectory(workingDirectory.getAbsolutePath()),
-                                new GitConfig()),
-                        commandLogger),
-                new NoOpMaven(workingDirectory, commandLogger));
         copy(new File(getResource("pom.xml").getFile()), workingDirectory.toPath().resolve("pom.xml").toFile());
+    }
+
+    @BeforeMethod
+    private void reset()
+    {
+        this.commandLogger = new CommandLogger();
     }
 
     @AfterClass
@@ -82,7 +80,38 @@ public class TestCutReleaseTask
     @Test
     public void testCutRelease()
     {
-        task.run();
+        createTask(new VersionVerificationConfig()).run();
+        assertCommands(commandLogger);
+    }
+
+    @Test
+    public void testCutReleaseExplicit()
+    {
+        createTask(new VersionVerificationConfig().setExpectedVersion("0.232")).run();
+        assertCommands(commandLogger);
+    }
+
+    @Test(expectedExceptions = IllegalStateException.class, expectedExceptionsMessageRegExp = "Version mismatch, expected 0.233, found 0.232 from pom.xml")
+    public void testVersionMismatch()
+    {
+        createTask(new VersionVerificationConfig().setExpectedVersion("0.233")).run();
+    }
+
+    private CutReleaseTask createTask(VersionVerificationConfig versionVerificationConfig)
+    {
+        return new CutReleaseTask(
+                new MockGit(
+                        GitRepository.create(
+                                workingDirectory.getName(),
+                                new GitRepositoryConfig().setDirectory(workingDirectory.getAbsolutePath()),
+                                new GitConfig()),
+                        commandLogger),
+                new NoOpMaven(workingDirectory, commandLogger),
+                versionVerificationConfig);
+    }
+
+    private static void assertCommands(CommandLogger commandLogger)
+    {
         assertEquals(
                 commandLogger.getCommands(),
                 ImmutableList.of("git status -s",

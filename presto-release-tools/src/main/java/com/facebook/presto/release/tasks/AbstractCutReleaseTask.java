@@ -24,6 +24,7 @@ import java.util.Optional;
 
 import static com.facebook.presto.release.ReleaseUtil.checkReleaseNotCut;
 import static com.facebook.presto.release.ReleaseUtil.checkTags;
+import static com.facebook.presto.release.ReleaseUtil.checkVersion;
 import static com.facebook.presto.release.ReleaseUtil.getPomFile;
 import static com.facebook.presto.release.ReleaseUtil.sanitizeRepository;
 import static com.facebook.presto.release.git.Git.RemoteType.UPSTREAM;
@@ -39,11 +40,14 @@ public abstract class AbstractCutReleaseTask
     private final GitRepository repository;
     private final Maven maven;
 
-    public AbstractCutReleaseTask(Git git, Maven maven)
+    private final Optional<MavenVersion> expectedVersion;
+
+    public AbstractCutReleaseTask(Git git, Maven maven, VersionVerificationConfig config)
     {
         this.git = requireNonNull(git, "git is null");
         this.repository = requireNonNull(git.getRepository(), "repository is null");
         this.maven = requireNonNull(maven, "maven is null");
+        this.expectedVersion = requireNonNull(config.getExpectedVersion(), "expectedVersion is null");
     }
 
     /**
@@ -56,6 +60,7 @@ public abstract class AbstractCutReleaseTask
     {
         sanitizeRepository(git);
         MavenVersion version = MavenVersion.fromDirectory(repository.getDirectory());
+        checkVersion(version, expectedVersion);
         checkTags(git, version);
         checkReleaseNotCut(git, version);
 

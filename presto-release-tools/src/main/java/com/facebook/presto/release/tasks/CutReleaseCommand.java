@@ -38,6 +38,9 @@ public class CutReleaseCommand
     @Inject
     public MavenOptions mavenOptions = new MavenOptions();
 
+    @Inject
+    public VersionVerificationOptions versionVerificationOptions = new VersionVerificationOptions();
+
     @Override
     protected List<Module> getModules()
     {

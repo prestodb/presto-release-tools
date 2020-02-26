@@ -21,10 +21,12 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Paths;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static com.google.common.base.MoreObjects.toStringHelper;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.lang.Integer.parseInt;
 import static java.lang.String.format;
@@ -106,5 +108,34 @@ public class MavenVersion
     private String getMinorSuffix()
     {
         return minorVersionNumber.map(version -> "." + version).orElse("");
+    }
+
+    @Override
+    public String toString()
+    {
+        return toStringHelper(this)
+                .add("versionNumber", versionNumber)
+                .add("minorVersionNumber", minorVersionNumber)
+                .toString();
+    }
+
+    @Override
+    public boolean equals(Object obj)
+    {
+        if (this == obj) {
+            return true;
+        }
+        if ((obj == null) || (getClass() != obj.getClass())) {
+            return false;
+        }
+        MavenVersion o = (MavenVersion) obj;
+        return Objects.equals(versionNumber, o.versionNumber) &&
+                Objects.equals(minorVersionNumber, o.minorVersionNumber);
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash(versionNumber, minorVersionNumber);
     }
 }
