@@ -13,25 +13,11 @@
  */
 package com.facebook.presto.release.tasks;
 
-import com.facebook.presto.release.ForPresto;
-import com.facebook.presto.release.git.Git;
-import com.facebook.presto.release.maven.Maven;
-import com.facebook.presto.release.maven.MavenVersion;
-import com.google.inject.Inject;
+import io.airlift.airline.Option;
 
-import java.io.File;
-
-public class FinalizeReleaseTask
-        extends AbstractFinalizeReleaseTask
+public class VersionVerificationOptions
 {
-    @Inject
-    public FinalizeReleaseTask(@ForPresto Git git, @ForPresto Maven maven, VersionVerificationConfig config)
-    {
-        super(git, maven, config);
-    }
-
-    @Override
-    protected void updatePom(File pomFile, MavenVersion releaseVersion)
-    {
-    }
+    @Option(name = "--expected-version", title = "version", description = "Expected release version")
+    @ConfigProperty("expected-version")
+    public String expectedVersion;
 }

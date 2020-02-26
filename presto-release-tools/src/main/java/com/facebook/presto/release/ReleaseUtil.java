@@ -41,6 +41,15 @@ public class ReleaseUtil
     }
 
     /**
+     * Check if the {@code expectedVersion} matches with the release version.
+     */
+    public static void checkVersion(MavenVersion version, Optional<MavenVersion> expectedVersion)
+    {
+        expectedVersion.ifPresent(expected ->
+                checkState(version.equals(expected), "Version mismatch, expected %s, found %s from pom.xml", expected.getVersion(), version.getVersion()));
+    }
+
+    /**
      * Check for tag validity for the given {@code releaseVersion}.
      */
     public static void checkTags(Git git, MavenVersion releaseVersion)
