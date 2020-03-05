@@ -131,7 +131,7 @@ public class TestGenerateReleaseNotesTask
 
         assertEquals(asCharSource(releaseNotesListFile, UTF_8).read(), getTestResourceContent("release_expected.rst"));
         assertEquals(asCharSource(releaseNotesFile, UTF_8).read(), getTestResourceContent("release-0.231_expected.rst"));
-        assertEquals(githubAction.getCreatedPullRequest().getDescription(), getTestResourceContent("description_expected.txt"));
+        assertEquals(githubAction.getCreatedPullRequest().getDescription().trim(), getTestResourceContent("description_expected.txt").trim());
     }
 
     private GenerateReleaseNotesTask initializeTask(List<Commit> commits)

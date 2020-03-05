@@ -1,5 +1,7 @@
 == RELEASE NOTES ==
 
 Raptor Changes
-* Change `storage.data-directory` from path to URI. For existing deployment on local flash, a scheme header "file://" should be added to the original config value.
-* Change error code name `RAPTOR_LOCAL_FILE_SYSTEM_ERROR` to `RAPTOR_FILE_SYSTEM_ERROR`.
+* Change ``storage.data-directory` from path to URI. For existing deployment on local flash, a scheme header "file://" should be added to the original config value.
+* Rename error code from ``RAPTOR_LOCAL_FILE_SYSTEM_ERROR`` to ``RAPTOR_FILE_SYSTEM_ERROR``.
+* Fix an issue where DATE_TRUNC may produce incorrect results at certain timestamp in America/Sao_Paulo.
+* Replace the ``SchemaTableName`` parameter in ``ConnectorMetadata#createView`` with a ``ConnectorTableMetadata``.

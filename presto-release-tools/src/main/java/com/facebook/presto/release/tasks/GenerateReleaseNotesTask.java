@@ -278,7 +278,9 @@ public class GenerateReleaseNotesTask
             document.append(header)
                     .append("\n")
                     .append(Joiner.on("").join(nCopies(header.length(), "_")));
-            for (ReleaseNoteItem item : releaseNotesByCategory.get(category)) {
+            List<ReleaseNoteItem> items = new ArrayList<>(releaseNotesByCategory.get(category));
+            sort(items, new ReleaseNoteItemComparator());
+            for (ReleaseNoteItem item : items) {
                 document.append("\n").append(item.getFormatted("*", 0));
             }
             document.append("\n\n");
@@ -434,6 +436,11 @@ public class GenerateReleaseNotesTask
             return section;
         }
 
+        public String getLine()
+        {
+            return line;
+        }
+
         public String getFormatted(String marking, int indent)
         {
             return format("%s%s %s%s", Joiner.on("").join(nCopies(indent, " ")), marking, line, line.endsWith(".") ? "" : ".");
@@ -456,6 +463,44 @@ public class GenerateReleaseNotesTask
                 }
             }
             return formatted.toString();
+        }
+    }
+
+    private static class ReleaseNoteItemComparator
+            implements Comparator<ReleaseNoteItem>
+    {
+        private enum ChangeType
+        {
+            FIX,
+            IMPROVE,
+            ADD,
+            REPLACE,
+            RENAME,
+            REMOVE,
+            OTHERS;
+
+            public static ChangeType of(ReleaseNoteItem item)
+            {
+                for (ChangeType changeType : ChangeType.values()) {
+                    if (changeType == OTHERS) {
+                        continue;
+                    }
+                    if (item.getLine().toUpperCase(ENGLISH).startsWith(changeType.name())) {
+                        return changeType;
+                    }
+                }
+                return OTHERS;
+            }
+        }
+
+        @Override
+        public int compare(ReleaseNoteItem o1, ReleaseNoteItem o2)
+        {
+            int changeType = ChangeType.of(o1).compareTo(ChangeType.of(o2));
+            if (changeType != 0) {
+                return changeType;
+            }
+            return o1.getLine().compareTo(o2.getLine());
         }
     }
 }
