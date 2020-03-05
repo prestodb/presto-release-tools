@@ -6,7 +6,7 @@ Tools to prepare Presto releases.
 
 To download the release tools executable.
 ```
-curl -L -o /tmp/presto_release "https://oss.sonatype.org/service/local/artifact/maven/redirect?g=com.facebook.presto&a=presto-release-tools&v=LATEST&r=snapshots&c=executable&e=jar"
+curl -L -o /tmp/presto_release "https://oss.sonatype.org/service/local/artifact/maven/redirect?g=com.facebook.presto&a=presto-release-tools&v=RELEASE&r=releases&c=executable&e=jar"
 chmod 755 /tmp/presto_release
 ```
 
