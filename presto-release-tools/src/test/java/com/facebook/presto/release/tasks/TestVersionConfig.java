@@ -22,23 +22,23 @@ import static com.facebook.airlift.configuration.testing.ConfigAssertions.assert
 import static com.facebook.airlift.configuration.testing.ConfigAssertions.assertRecordedDefaults;
 import static com.facebook.airlift.configuration.testing.ConfigAssertions.recordDefaults;
 
-public class TestVersionVerificationConfig
+public class TestVersionConfig
 {
     @Test
     public void testDefault()
     {
-        assertRecordedDefaults(recordDefaults(VersionVerificationConfig.class)
-                .setExpectedVersion(null));
+        assertRecordedDefaults(recordDefaults(VersionConfig.class)
+                .setReleaseVersion(null));
     }
 
     @Test
     public void testExplicitPropertyMappings()
     {
         Map<String, String> properties = new ImmutableMap.Builder<String, String>()
-                .put("expected-version", "0.231")
+                .put("release-version", "0.231")
                 .build();
-        VersionVerificationConfig expected = new VersionVerificationConfig()
-                .setExpectedVersion("0.231");
+        VersionConfig expected = new VersionConfig()
+                .setReleaseVersion("0.231");
 
         assertFullMapping(properties, expected);
     }

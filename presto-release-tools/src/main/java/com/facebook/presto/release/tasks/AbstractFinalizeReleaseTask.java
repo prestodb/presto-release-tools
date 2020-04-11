@@ -42,14 +42,14 @@ public abstract class AbstractFinalizeReleaseTask
     private final GitRepository repository;
     private final Maven maven;
 
-    private final Optional<MavenVersion> expectedVersion;
+    private final Optional<MavenVersion> releaseVersion;
 
-    public AbstractFinalizeReleaseTask(Git git, Maven maven, VersionVerificationConfig config)
+    public AbstractFinalizeReleaseTask(Git git, Maven maven, VersionConfig config)
     {
         this.git = requireNonNull(git, "git is null");
         this.repository = requireNonNull(git.getRepository(), "repository is null");
         this.maven = requireNonNull(maven, "maven is null");
-        this.expectedVersion = requireNonNull(config.getExpectedVersion(), "expectedVersion is null");
+        this.releaseVersion = requireNonNull(config.getReleaseVersion(), "releaseVersion is null");
     }
 
     protected Git getGit()
@@ -67,7 +67,7 @@ public abstract class AbstractFinalizeReleaseTask
     {
         sanitizeRepository(git);
         MavenVersion version = MavenVersion.fromDirectory(repository.getDirectory()).getLastMajorVersion();
-        checkVersion(version, expectedVersion);
+        checkVersion(version, releaseVersion);
         checkTags(git, version);
         checkReleaseCut(git, version);
 

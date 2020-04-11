@@ -39,7 +39,7 @@ public class FinalizeReleaseCommand
     public MavenOptions mavenOptions = new MavenOptions();
 
     @Inject
-    public VersionVerificationOptions versionVerificationOptions = new VersionVerificationOptions();
+    public VersionOptions versionOptions = new VersionOptions();
 
     @Override
     protected List<Module> getModules()

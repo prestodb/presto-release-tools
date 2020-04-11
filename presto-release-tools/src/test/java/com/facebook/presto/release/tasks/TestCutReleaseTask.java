@@ -80,24 +80,24 @@ public class TestCutReleaseTask
     @Test
     public void testCutRelease()
     {
-        createTask(new VersionVerificationConfig()).run();
+        createTask(new VersionConfig()).run();
         assertCommands(commandLogger);
     }
 
     @Test
     public void testCutReleaseExplicit()
     {
-        createTask(new VersionVerificationConfig().setExpectedVersion("0.232")).run();
+        createTask(new VersionConfig().setReleaseVersion("0.232")).run();
         assertCommands(commandLogger);
     }
 
     @Test(expectedExceptions = IllegalStateException.class, expectedExceptionsMessageRegExp = "Version mismatch, expected 0.233, found 0.232 from pom.xml")
     public void testVersionMismatch()
     {
-        createTask(new VersionVerificationConfig().setExpectedVersion("0.233")).run();
+        createTask(new VersionConfig().setReleaseVersion("0.233")).run();
     }
 
-    private CutReleaseTask createTask(VersionVerificationConfig versionVerificationConfig)
+    private CutReleaseTask createTask(VersionConfig versionConfig)
     {
         return new CutReleaseTask(
                 new MockGit(
@@ -107,7 +107,7 @@ public class TestCutReleaseTask
                                 new GitConfig()),
                         commandLogger),
                 new NoOpMaven(workingDirectory, commandLogger),
-                versionVerificationConfig);
+                versionConfig);
     }
 
     private static void assertCommands(CommandLogger commandLogger)

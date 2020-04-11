@@ -15,9 +15,9 @@ package com.facebook.presto.release.tasks;
 
 import io.airlift.airline.Option;
 
-public class VersionVerificationOptions
+public class VersionOptions
 {
-    @Option(name = "--expected-version", title = "version", description = "Expected release version")
-    @ConfigProperty("expected-version")
-    public String expectedVersion;
+    @Option(name = "--release-version", title = "version", description = "Release version")
+    @ConfigProperty("release-version")
+    public String releaseVersion;
 }

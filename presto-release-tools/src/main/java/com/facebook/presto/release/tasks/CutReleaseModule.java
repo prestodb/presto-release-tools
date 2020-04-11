@@ -25,7 +25,7 @@ public class CutReleaseModule
     @Override
     public void configure(Binder binder)
     {
-        configBinder(binder).bindConfig(VersionVerificationConfig.class);
+        configBinder(binder).bindConfig(VersionConfig.class);
         binder.bind(CutReleaseTask.class).in(SINGLETON);
     }
 }

@@ -20,22 +20,22 @@ import javax.validation.constraints.NotNull;
 
 import java.util.Optional;
 
-public class VersionVerificationConfig
+public class VersionConfig
 {
-    private Optional<MavenVersion> expectedVersion = Optional.empty();
+    private Optional<MavenVersion> releaseVersion = Optional.empty();
 
     @NotNull
-    public Optional<MavenVersion> getExpectedVersion()
+    public Optional<MavenVersion> getReleaseVersion()
     {
-        return expectedVersion;
+        return releaseVersion;
     }
 
-    @Config("expected-version")
-    public VersionVerificationConfig setExpectedVersion(String expectedVersion)
+    @Config("release-version")
+    public VersionConfig setReleaseVersion(String releaseVersion)
     {
-        if (expectedVersion != null) {
+        if (releaseVersion != null) {
             try {
-                this.expectedVersion = Optional.of(MavenVersion.fromReleaseVersion(expectedVersion));
+                this.releaseVersion = Optional.of(MavenVersion.fromReleaseVersion(releaseVersion));
             }
             catch (IllegalArgumentException e) {
                 // ignore
