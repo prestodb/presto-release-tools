@@ -25,7 +25,7 @@ public class CutReleaseTask
         extends AbstractCutReleaseTask
 {
     @Inject
-    public CutReleaseTask(@ForPresto Git git, @ForPresto Maven maven, VersionVerificationConfig config)
+    public CutReleaseTask(@ForPresto Git git, @ForPresto Maven maven, VersionConfig config)
     {
         super(git, maven, config);
     }

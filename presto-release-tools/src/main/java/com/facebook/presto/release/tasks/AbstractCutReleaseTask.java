@@ -40,14 +40,14 @@ public abstract class AbstractCutReleaseTask
     private final GitRepository repository;
     private final Maven maven;
 
-    private final Optional<MavenVersion> expectedVersion;
+    private final Optional<MavenVersion> releaseVersion;
 
-    public AbstractCutReleaseTask(Git git, Maven maven, VersionVerificationConfig config)
+    public AbstractCutReleaseTask(Git git, Maven maven, VersionConfig config)
     {
         this.git = requireNonNull(git, "git is null");
         this.repository = requireNonNull(git.getRepository(), "repository is null");
         this.maven = requireNonNull(maven, "maven is null");
-        this.expectedVersion = requireNonNull(config.getExpectedVersion(), "expectedVersion is null");
+        this.releaseVersion = requireNonNull(config.getReleaseVersion(), "releaseVersion is null");
     }
 
     /**
@@ -60,7 +60,7 @@ public abstract class AbstractCutReleaseTask
     {
         sanitizeRepository(git);
         MavenVersion version = MavenVersion.fromDirectory(repository.getDirectory());
-        checkVersion(version, expectedVersion);
+        checkVersion(version, releaseVersion);
         checkTags(git, version);
         checkReleaseNotCut(git, version);
 

@@ -25,7 +25,7 @@ public class FinalizeReleaseModule
     @Override
     public void configure(Binder binder)
     {
-        configBinder(binder).bindConfig(VersionVerificationConfig.class);
+        configBinder(binder).bindConfig(VersionConfig.class);
         binder.bind(FinalizeReleaseTask.class).in(SINGLETON);
     }
 }

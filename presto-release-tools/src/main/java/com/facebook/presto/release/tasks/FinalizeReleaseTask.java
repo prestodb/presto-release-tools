@@ -25,7 +25,7 @@ public class FinalizeReleaseTask
         extends AbstractFinalizeReleaseTask
 {
     @Inject
-    public FinalizeReleaseTask(@ForPresto Git git, @ForPresto Maven maven, VersionVerificationConfig config)
+    public FinalizeReleaseTask(@ForPresto Git git, @ForPresto Maven maven, VersionConfig config)
     {
         super(git, maven, config);
     }
