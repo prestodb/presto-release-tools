@@ -60,7 +60,7 @@ public abstract class AbstractCutReleaseTask
     {
         sanitizeRepository(git);
         MavenVersion version = MavenVersion.fromDirectory(repository.getDirectory());
-        checkVersion(version, releaseVersion);
+        releaseVersion.ifPresent(mavenVersion -> checkVersion(mavenVersion, version));
         checkTags(git, version);
         checkReleaseNotCut(git, version);
 

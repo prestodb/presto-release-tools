@@ -91,7 +91,7 @@ public class TestCutReleaseTask
         assertCommands(commandLogger);
     }
 
-    @Test(expectedExceptions = IllegalStateException.class, expectedExceptionsMessageRegExp = "Version mismatch, expected 0.233, found 0.232 from pom.xml")
+    @Test(expectedExceptions = IllegalStateException.class, expectedExceptionsMessageRegExp = "Specified release version \\(0\\.233\\) mismatches pom version \\(0\\.232\\)")
     public void testVersionMismatch()
     {
         createTask(new VersionConfig().setReleaseVersion("0.233")).run();

@@ -41,12 +41,11 @@ public class ReleaseUtil
     }
 
     /**
-     * Check if the {@code expectedVersion} matches with the release version.
+     * Check if the {@code specifiedVersion} matches with the {@code pomVersion}.
      */
-    public static void checkVersion(MavenVersion version, Optional<MavenVersion> expectedVersion)
+    public static void checkVersion(MavenVersion specifiedVersion, MavenVersion pomVersion)
     {
-        expectedVersion.ifPresent(expected ->
-                checkState(version.equals(expected), "Version mismatch, expected %s, found %s from pom.xml", expected.getVersion(), version.getVersion()));
+        checkState(specifiedVersion.equals(pomVersion), "Specified release version (%s) mismatches pom version (%s)", specifiedVersion, pomVersion);
     }
 
     /**
@@ -55,11 +54,14 @@ public class ReleaseUtil
     public static void checkTags(Git git, MavenVersion releaseVersion)
     {
         List<String> tags = git.tag();
+        MavenVersion lastVersion = releaseVersion.isHotFixVersion()
+                ? releaseVersion.getLastMinorVersion()
+                : releaseVersion.getLastMajorVersion();
         checkState(
-                tags.contains(releaseVersion.getLastMajorVersion().getVersion()),
+                tags.contains(lastVersion.getVersion()),
                 "Release version is [%s], but tag [%s] is not found.",
                 releaseVersion.getVersion(),
-                releaseVersion.getLastMajorVersion().getVersion());
+                lastVersion);
         checkState(
                 !tags.contains(releaseVersion.getVersion()),
                 "Release version is [%s], but tag [%s] already exists.",

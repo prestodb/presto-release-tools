@@ -13,16 +13,20 @@
  */
 package com.facebook.presto.release.maven;
 
-import com.google.common.io.Resources;
 import org.testng.annotations.Test;
 
 import java.io.File;
+import java.util.regex.Pattern;
 
 import static com.facebook.presto.release.maven.MavenVersion.fromDirectory;
 import static com.facebook.presto.release.maven.MavenVersion.fromPom;
 import static com.facebook.presto.release.maven.MavenVersion.fromReleaseVersion;
 import static com.facebook.presto.release.maven.MavenVersion.fromSnapshotVersion;
+import static com.google.common.io.Resources.getResource;
+import static java.lang.String.format;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertTrue;
+import static org.testng.Assert.fail;
 
 public class TestMavenVersion
 {
@@ -30,43 +34,46 @@ public class TestMavenVersion
     public void testReleaseVersion()
     {
         assertEquals(fromReleaseVersion("0.230").getVersion(), "0.230");
+        assertEquals(fromReleaseVersion("0.230.1").getVersion(), "0.230.1");
+        assertEquals(fromReleaseVersion("0.230.2").getVersion(), "0.230.2");
     }
 
-    @Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "Invalid release version: 0\\.230-SNAPSHOT")
+    @Test
     public void testInvalidReleaseVersion()
     {
-        fromReleaseVersion("0.230-SNAPSHOT");
+        assertFailed(() -> fromReleaseVersion("0.230-SNAPSHOT"), "Invalid release version: 0\\.230-SNAPSHOT");
+        assertFailed(() -> fromReleaseVersion("0.230.0"), "Invalid release version: 0\\.230\\.0");
+        assertFailed(() -> fromReleaseVersion("230"), "Invalid release version: 230");
+        assertFailed(() -> fromReleaseVersion("0.0"), "Invalid release version: 0.0");
     }
 
     @Test
     public void testSnapshotVersion()
     {
         assertEquals(fromSnapshotVersion("0.230-SNAPSHOT").getVersion(), "0.230");
+        assertEquals(fromSnapshotVersion("0.230.1-SNAPSHOT").getVersion(), "0.230.1");
+        assertEquals(fromSnapshotVersion("0.230.2-SNAPSHOT").getVersion(), "0.230.2");
     }
 
-    @Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "Invalid snapshot version: 0\\.230")
+    @Test
     public void testInvalidSnapshotVersion()
     {
-        fromSnapshotVersion("0.230");
-    }
-
-    @Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "Invalid release version: 0\\.0")
-    public void testZeroVersion()
-    {
-        fromReleaseVersion("0.0");
+        assertFailed(() -> fromSnapshotVersion("0.230"), "Invalid snapshot version: 0\\.230");
+        assertFailed(() -> fromSnapshotVersion("0.230.0-SNAPSHOT"), "Invalid snapshot version: 0\\.230\\.0-SNAPSHOT");
+        assertFailed(() -> fromSnapshotVersion("230-SNAPSHOT"), "Invalid snapshot version: 230-SNAPSHOT");
     }
 
     @Test
     public void testFromPom()
     {
-        File pomFile = new File(Resources.getResource("pom.xml").getFile());
+        File pomFile = new File(getResource("pom.xml").getFile());
         assertEquals(fromPom(pomFile).getVersion(), "0.232");
     }
 
     @Test
     public void testFromDirectory()
     {
-        File pomFile = new File(Resources.getResource("pom.xml").getFile()).getParentFile();
+        File pomFile = new File(getResource("pom.xml").getFile()).getParentFile();
         assertEquals(fromDirectory(pomFile).getVersion(), "0.232");
     }
 
@@ -91,5 +98,20 @@ public class TestMavenVersion
         assertEquals(nextMinor.getNextMajorVersion().getSnapshotVersion(), "0.231-SNAPSHOT");
         assertEquals(nextMinor.getNextMinorVersion().getVersion(), "0.230.2");
         assertEquals(nextMinor.getNextMinorVersion().getSnapshotVersion(), "0.230.2-SNAPSHOT");
+    }
+
+    private static void assertFailed(Runnable runnable, String errorMessageRegexp)
+    {
+        try {
+            runnable.run();
+            fail("Expect exception but succeeded");
+        }
+        catch (RuntimeException e) {
+            assertTrue(
+                    Pattern.compile(errorMessageRegexp).matcher(e.getMessage()).matches(),
+                    format("Error message '%s' does not match expected pattern '%s'",
+                            e.getMessage(),
+                            errorMessageRegexp));
+        }
     }
 }
