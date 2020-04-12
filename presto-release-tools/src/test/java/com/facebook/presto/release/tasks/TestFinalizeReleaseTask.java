@@ -17,7 +17,7 @@ import com.facebook.presto.release.CommandLogger;
 import com.facebook.presto.release.git.GitConfig;
 import com.facebook.presto.release.git.GitRepository;
 import com.facebook.presto.release.git.GitRepositoryConfig;
-import com.facebook.presto.release.git.NoOpGit;
+import com.facebook.presto.release.git.TestingGit;
 import com.facebook.presto.release.maven.NoOpMaven;
 import com.google.common.collect.ImmutableList;
 import org.testng.annotations.AfterClass;
@@ -26,8 +26,9 @@ import org.testng.annotations.Test;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.List;
 
+import static com.facebook.presto.release.git.TestingGitUtil.getCheckoutReleaseBranchAction;
+import static com.facebook.presto.release.maven.MavenVersion.fromReleaseVersion;
 import static com.google.common.io.Files.copy;
 import static com.google.common.io.Files.createTempDir;
 import static com.google.common.io.MoreFiles.deleteRecursively;
@@ -38,43 +39,30 @@ import static org.testng.Assert.assertEquals;
 @Test(singleThreaded = true)
 public class TestFinalizeReleaseTask
 {
-    private static class MockGit
-            extends NoOpGit
-    {
-        public MockGit(GitRepository repository, CommandLogger commandLogger)
-        {
-            super(repository, commandLogger);
-        }
-
-        @Override
-        public List<String> listUpstreamHeads(String branch)
-        {
-            super.listUpstreamHeads(branch);
-            return ImmutableList.of("release-0.231");
-        }
-
-        @Override
-        public List<String> tag()
-        {
-            super.tag();
-            return ImmutableList.of("0.230");
-        }
-    }
-
     private final File workingDirectory;
+    private final File pomFile;
+
     private CommandLogger commandLogger;
+    private TestingGit git;
 
     public TestFinalizeReleaseTask()
-            throws IOException
     {
         this.workingDirectory = createTempDir();
-        copy(new File(getResource("pom.xml").getFile()), workingDirectory.toPath().resolve("pom.xml").toFile());
+        this.pomFile = workingDirectory.toPath().resolve("pom.xml").toFile();
     }
 
     @BeforeMethod
-    private void reset()
+    private void setup()
+            throws IOException
     {
+        copy(new File(getResource("pom.xml").getFile()), pomFile);
         this.commandLogger = new CommandLogger();
+        this.git = new TestingGit(
+                GitRepository.create(
+                        workingDirectory.getName(),
+                        new GitRepositoryConfig().setDirectory(workingDirectory.getAbsolutePath()),
+                        new GitConfig()),
+                commandLogger);
     }
 
     @AfterClass
@@ -85,20 +73,30 @@ public class TestFinalizeReleaseTask
     }
 
     @Test
-    public void testCutRelease()
+    public void testFinalizeRelease()
     {
+        git.setCheckoutAction(getCheckoutReleaseBranchAction(pomFile, fromReleaseVersion("0.231"))).setUpstreamHeads("0.231").setTags("0.230");
         createTask(new VersionConfig()).run();
         assertCommands(commandLogger);
     }
 
     @Test
-    public void testCutReleaseExplicit()
+    public void testFinalizeReleaseExplicit()
     {
+        git.setCheckoutAction(getCheckoutReleaseBranchAction(pomFile, fromReleaseVersion("0.231"))).setUpstreamHeads("0.231").setTags("0.230");
         createTask(new VersionConfig().setReleaseVersion("0.231")).run();
         assertCommands(commandLogger);
     }
 
-    @Test(expectedExceptions = IllegalStateException.class, expectedExceptionsMessageRegExp = "Version mismatch, expected 0.232, found 0.231 from pom.xml")
+    @Test
+    public void testFinalizeReleaseHotFix()
+    {
+        git.setCheckoutAction(getCheckoutReleaseBranchAction(pomFile, fromReleaseVersion("0.231.1"))).setUpstreamHeads("0.231").setTags("0.231");
+        createTask(new VersionConfig().setReleaseVersion("0.231.1")).run();
+        assertCommandsHotFix(commandLogger);
+    }
+
+    @Test(expectedExceptions = IllegalStateException.class, expectedExceptionsMessageRegExp = "Specified release version \\(0\\.232\\) mismatches pom version \\(0\\.231\\)")
     public void testVersionMismatch()
     {
         createTask(new VersionConfig().setReleaseVersion("0.232")).run();
@@ -106,15 +104,7 @@ public class TestFinalizeReleaseTask
 
     public FinalizeReleaseTask createTask(VersionConfig versionConfig)
     {
-        return new FinalizeReleaseTask(
-                new MockGit(
-                        GitRepository.create(
-                                workingDirectory.getName(),
-                                new GitRepositoryConfig().setDirectory(workingDirectory.getAbsolutePath()),
-                                new GitConfig()),
-                        commandLogger),
-                new NoOpMaven(workingDirectory, commandLogger),
-                versionConfig);
+        return new FinalizeReleaseTask(git, new NoOpMaven(workingDirectory, commandLogger), versionConfig);
     }
 
     private static void assertCommands(CommandLogger commandLogger)
@@ -131,6 +121,24 @@ public class TestFinalizeReleaseTask
                         "git branch -D release-0.231",
                         "git checkout -b release-0.231 upstream/release-0.231",
                         "mvn release:prepare -DreleaseVersion=0.231 -DdevelopmentVersion=0.231.1-SNAPSHOT -Dtag=0.231",
+                        "mvn release:clean",
+                        "git push upstream -u release-0.231:release-0.231 --tags"));
+    }
+
+    private static void assertCommandsHotFix(CommandLogger commandLogger)
+    {
+        assertEquals(
+                commandLogger.getCommands(),
+                ImmutableList.of(
+                        "git status -s",
+                        "git checkout master",
+                        "git pull --ff-only upstream master",
+                        "git fetch upstream",
+                        "git tag",
+                        "git ls-remote --heads upstream release-0.231",
+                        "git branch -D release-0.231",
+                        "git checkout -b release-0.231 upstream/release-0.231",
+                        "mvn release:prepare -DreleaseVersion=0.231.1 -DdevelopmentVersion=0.231.2-SNAPSHOT -Dtag=0.231.1",
                         "mvn release:clean",
                         "git push upstream -u release-0.231:release-0.231 --tags"));
     }

@@ -26,15 +26,14 @@ import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static com.google.common.base.MoreObjects.toStringHelper;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.lang.Integer.parseInt;
 import static java.lang.String.format;
 
 public class MavenVersion
 {
-    private static final Pattern RELEASE_VERSION_PATTERN = Pattern.compile("0\\.([1-9][0-9]*)");
-    private static final Pattern SNAPSHOT_VERSION_PATTERN = Pattern.compile("0\\.([1-9][0-9]*)-SNAPSHOT");
+    private static final Pattern RELEASE_VERSION_PATTERN = Pattern.compile("0\\.([1-9][0-9]*)(\\.([1-9][0-9]*))?");
+    private static final Pattern SNAPSHOT_VERSION_PATTERN = Pattern.compile("0\\.([1-9][0-9]*)(\\.([1-9][0-9]*))?-SNAPSHOT");
 
     private final int versionNumber;
     private final Optional<Integer> minorVersionNumber;
@@ -70,14 +69,24 @@ public class MavenVersion
     {
         Matcher matcher = RELEASE_VERSION_PATTERN.matcher(version);
         checkArgument(matcher.matches(), "Invalid release version: %s", version);
-        return new MavenVersion(parseInt(matcher.group(1)), Optional.empty());
+        return new MavenVersion(parseInt(matcher.group(1)), Optional.ofNullable(matcher.group(3)).map(Integer::parseInt));
     }
 
     public static MavenVersion fromSnapshotVersion(String version)
     {
         Matcher matcher = SNAPSHOT_VERSION_PATTERN.matcher(version);
         checkArgument(matcher.matches(), "Invalid snapshot version: %s", version);
-        return new MavenVersion(parseInt(matcher.group(1)), Optional.empty());
+        return new MavenVersion(parseInt(matcher.group(1)), Optional.ofNullable(matcher.group(3)).map(Integer::parseInt));
+    }
+
+    public boolean isHotFixVersion()
+    {
+        return minorVersionNumber.isPresent();
+    }
+
+    public MavenVersion getMajorVersion()
+    {
+        return new MavenVersion(versionNumber, Optional.empty());
     }
 
     public MavenVersion getLastMajorVersion()
@@ -88,6 +97,12 @@ public class MavenVersion
     public MavenVersion getNextMajorVersion()
     {
         return new MavenVersion(versionNumber + 1, Optional.empty());
+    }
+
+    public MavenVersion getLastMinorVersion()
+    {
+        checkArgument(minorVersionNumber.isPresent(), format("No last minor version for major version: %s", toString()));
+        return new MavenVersion(versionNumber, minorVersionNumber.get() == 1 ? Optional.empty() : Optional.of(minorVersionNumber.get() - 1));
     }
 
     public MavenVersion getNextMinorVersion()
@@ -113,10 +128,7 @@ public class MavenVersion
     @Override
     public String toString()
     {
-        return toStringHelper(this)
-                .add("versionNumber", versionNumber)
-                .add("minorVersionNumber", minorVersionNumber)
-                .toString();
+        return getVersion();
     }
 
     @Override

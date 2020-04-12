@@ -66,12 +66,16 @@ public abstract class AbstractFinalizeReleaseTask
     public void run()
     {
         sanitizeRepository(git);
-        MavenVersion version = MavenVersion.fromDirectory(repository.getDirectory()).getLastMajorVersion();
-        checkVersion(version, releaseVersion);
+        MavenVersion masterReleaseVersion = MavenVersion.fromDirectory(repository.getDirectory()).getLastMajorVersion();
+        if (releaseVersion.isPresent() && !releaseVersion.get().isHotFixVersion()) {
+            checkVersion(releaseVersion.get(), masterReleaseVersion);
+        }
+        MavenVersion version = releaseVersion.orElse(masterReleaseVersion);
+        MavenVersion majorVersion = version.getMajorVersion();
         checkTags(git, version);
-        checkReleaseCut(git, version);
+        checkReleaseCut(git, majorVersion);
 
-        String releaseBranch = getReleaseBranch(version);
+        String releaseBranch = getReleaseBranch(majorVersion);
         try {
             git.deleteBranch(releaseBranch);
         }
@@ -79,6 +83,10 @@ public abstract class AbstractFinalizeReleaseTask
             // ignore
         }
         git.checkout(Optional.of(format("%s/%s", repository.getUpstreamName(), releaseBranch)), Optional.of(releaseBranch));
+        if (version.isHotFixVersion()) {
+            MavenVersion branchReleaseVersion = MavenVersion.fromDirectory(repository.getDirectory());
+            checkVersion(version, branchReleaseVersion);
+        }
 
         updatePom(getPomFile(repository.getDirectory()), version);
 

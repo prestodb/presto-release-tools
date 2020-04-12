@@ -17,7 +17,7 @@ import com.facebook.presto.release.CommandLogger;
 import com.facebook.presto.release.git.GitConfig;
 import com.facebook.presto.release.git.GitRepository;
 import com.facebook.presto.release.git.GitRepositoryConfig;
-import com.facebook.presto.release.git.NoOpGit;
+import com.facebook.presto.release.git.TestingGit;
 import com.facebook.presto.release.maven.NoOpMaven;
 import com.google.common.collect.ImmutableList;
 import org.testng.annotations.AfterClass;
@@ -26,7 +26,6 @@ import org.testng.annotations.Test;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.List;
 
 import static com.google.common.io.Files.copy;
 import static com.google.common.io.Files.createTempDir;
@@ -38,24 +37,10 @@ import static org.testng.Assert.assertEquals;
 @Test(singleThreaded = true)
 public class TestCutReleaseTask
 {
-    private static class MockGit
-            extends NoOpGit
-    {
-        public MockGit(GitRepository repository, CommandLogger commandLogger)
-        {
-            super(repository, commandLogger);
-        }
-
-        @Override
-        public List<String> tag()
-        {
-            super.tag();
-            return ImmutableList.of("0.231");
-        }
-    }
-
     private final File workingDirectory;
+
     private CommandLogger commandLogger;
+    private TestingGit git;
 
     public TestCutReleaseTask()
             throws IOException
@@ -68,6 +53,12 @@ public class TestCutReleaseTask
     private void reset()
     {
         this.commandLogger = new CommandLogger();
+        this.git = new TestingGit(
+                GitRepository.create(
+                        workingDirectory.getName(),
+                        new GitRepositoryConfig().setDirectory(workingDirectory.getAbsolutePath()),
+                        new GitConfig()),
+                commandLogger);
     }
 
     @AfterClass
@@ -80,6 +71,7 @@ public class TestCutReleaseTask
     @Test
     public void testCutRelease()
     {
+        git.setTags("0.231");
         createTask(new VersionConfig()).run();
         assertCommands(commandLogger);
     }
@@ -87,11 +79,12 @@ public class TestCutReleaseTask
     @Test
     public void testCutReleaseExplicit()
     {
+        git.setTags("0.231");
         createTask(new VersionConfig().setReleaseVersion("0.232")).run();
         assertCommands(commandLogger);
     }
 
-    @Test(expectedExceptions = IllegalStateException.class, expectedExceptionsMessageRegExp = "Version mismatch, expected 0.233, found 0.232 from pom.xml")
+    @Test(expectedExceptions = IllegalStateException.class, expectedExceptionsMessageRegExp = "Specified release version \\(0\\.233\\) mismatches pom version \\(0\\.232\\)")
     public void testVersionMismatch()
     {
         createTask(new VersionConfig().setReleaseVersion("0.233")).run();
@@ -99,15 +92,7 @@ public class TestCutReleaseTask
 
     private CutReleaseTask createTask(VersionConfig versionConfig)
     {
-        return new CutReleaseTask(
-                new MockGit(
-                        GitRepository.create(
-                                workingDirectory.getName(),
-                                new GitRepositoryConfig().setDirectory(workingDirectory.getAbsolutePath()),
-                                new GitConfig()),
-                        commandLogger),
-                new NoOpMaven(workingDirectory, commandLogger),
-                versionConfig);
+        return new CutReleaseTask(git, new NoOpMaven(workingDirectory, commandLogger), versionConfig);
     }
 
     private static void assertCommands(CommandLogger commandLogger)
