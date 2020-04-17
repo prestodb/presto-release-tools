@@ -17,7 +17,7 @@ import com.facebook.presto.release.CommandLogger;
 import com.facebook.presto.release.git.GitConfig;
 import com.facebook.presto.release.git.GitRepository;
 import com.facebook.presto.release.git.GitRepositoryConfig;
-import com.facebook.presto.release.git.NoOpGit;
+import com.facebook.presto.release.git.TestingGit;
 import com.facebook.presto.release.maven.NoOpMaven;
 import com.google.common.collect.ImmutableList;
 import org.testng.annotations.AfterClass;
@@ -26,75 +26,24 @@ import org.testng.annotations.Test;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.util.List;
-import java.util.Optional;
-import java.util.function.Consumer;
 
-import static com.google.common.io.Files.asCharSink;
-import static com.google.common.io.Files.asCharSource;
+import static com.facebook.presto.release.git.TestingGitUtil.getCheckoutReleaseBranchAction;
+import static com.facebook.presto.release.maven.MavenVersion.fromReleaseVersion;
 import static com.google.common.io.Files.copy;
 import static com.google.common.io.Files.createTempDir;
 import static com.google.common.io.MoreFiles.deleteRecursively;
 import static com.google.common.io.RecursiveDeleteOption.ALLOW_INSECURE;
 import static com.google.common.io.Resources.getResource;
-import static java.lang.String.format;
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.testng.Assert.assertEquals;
 
 @Test(singleThreaded = true)
 public class TestFinalizeReleaseTask
 {
-    private static class MockGit
-            extends NoOpGit
-    {
-        private Optional<Consumer<Optional<String>>> checkoutAction = Optional.empty();
-        private List<String> tags = ImmutableList.of();
-
-        public MockGit(GitRepository repository, CommandLogger commandLogger)
-        {
-            super(repository, commandLogger);
-        }
-
-        public MockGit setCheckoutAction(Consumer<Optional<String>> checkoutAction)
-        {
-            this.checkoutAction = Optional.of(checkoutAction);
-            return this;
-        }
-
-        public MockGit setTags(String... tags)
-        {
-            this.tags = ImmutableList.copyOf(tags);
-            return this;
-        }
-
-        @Override
-        public List<String> listUpstreamHeads(String branch)
-        {
-            super.listUpstreamHeads(branch);
-            return ImmutableList.of("release-0.231");
-        }
-
-        @Override
-        public List<String> tag()
-        {
-            super.tag();
-            return tags;
-        }
-
-        @Override
-        public void checkout(Optional<String> ref, Optional<String> createBranch)
-        {
-            super.checkout(ref, createBranch);
-            checkoutAction.ifPresent(consumer -> consumer.accept(ref));
-        }
-    }
-
     private final File workingDirectory;
     private final File pomFile;
 
     private CommandLogger commandLogger;
-    private MockGit git;
+    private TestingGit git;
 
     public TestFinalizeReleaseTask()
     {
@@ -108,7 +57,7 @@ public class TestFinalizeReleaseTask
     {
         copy(new File(getResource("pom.xml").getFile()), pomFile);
         this.commandLogger = new CommandLogger();
-        this.git = new MockGit(
+        this.git = new TestingGit(
                 GitRepository.create(
                         workingDirectory.getName(),
                         new GitRepositoryConfig().setDirectory(workingDirectory.getAbsolutePath()),
@@ -126,7 +75,7 @@ public class TestFinalizeReleaseTask
     @Test
     public void testFinalizeRelease()
     {
-        git.setCheckoutAction(getGitCheckoutAction("0.231-SNAPSHOT")).setTags("0.230");
+        git.setCheckoutAction(getCheckoutReleaseBranchAction(pomFile, fromReleaseVersion("0.231"))).setUpstreamHeads("0.231").setTags("0.230");
         createTask(new VersionConfig()).run();
         assertCommands(commandLogger);
     }
@@ -134,7 +83,7 @@ public class TestFinalizeReleaseTask
     @Test
     public void testFinalizeReleaseExplicit()
     {
-        git.setCheckoutAction(getGitCheckoutAction("0.231-SNAPSHOT")).setTags("0.230");
+        git.setCheckoutAction(getCheckoutReleaseBranchAction(pomFile, fromReleaseVersion("0.231"))).setUpstreamHeads("0.231").setTags("0.230");
         createTask(new VersionConfig().setReleaseVersion("0.231")).run();
         assertCommands(commandLogger);
     }
@@ -142,7 +91,7 @@ public class TestFinalizeReleaseTask
     @Test
     public void testFinalizeReleaseHotFix()
     {
-        git.setCheckoutAction(getGitCheckoutAction("0.231.1-SNAPSHOT")).setTags("0.231");
+        git.setCheckoutAction(getCheckoutReleaseBranchAction(pomFile, fromReleaseVersion("0.231.1"))).setUpstreamHeads("0.231").setTags("0.231");
         createTask(new VersionConfig().setReleaseVersion("0.231.1")).run();
         assertCommandsHotFix(commandLogger);
     }
@@ -156,23 +105,6 @@ public class TestFinalizeReleaseTask
     public FinalizeReleaseTask createTask(VersionConfig versionConfig)
     {
         return new FinalizeReleaseTask(git, new NoOpMaven(workingDirectory, commandLogger), versionConfig);
-    }
-
-    private Consumer<Optional<String>> getGitCheckoutAction(String pomVersion)
-    {
-        return ref -> {
-            if (ref.equals(Optional.of("upstream/release-0.231"))) {
-                try {
-                    String newPom = asCharSource(pomFile, UTF_8).read().replaceAll(
-                            "<version>0\\.232-SNAPSHOT</version>",
-                            format("<version>%s</version>", pomVersion));
-                    asCharSink(pomFile, UTF_8).write(newPom);
-                }
-                catch (IOException e) {
-                    throw new UncheckedIOException(e);
-                }
-            }
-        };
     }
 
     private static void assertCommands(CommandLogger commandLogger)
