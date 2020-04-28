@@ -58,9 +58,14 @@ public abstract class AbstractFinalizeReleaseTask
     }
 
     /**
-     * Perform a custom update to the pom file.
+     * Perform a custom update to the pom file before mvn release:prepare.
      */
-    protected abstract void updatePom(File pomFile, MavenVersion releaseVersion);
+    protected abstract void updatePomBeforeReleasePrepare(File pomFile, MavenVersion releaseVersion);
+
+    /**
+     * Perform a custom update to the pom file after mvn release:prepare.
+     */
+    protected abstract void updatePomAfterReleasePrepare(File pomFile, MavenVersion releaseVersion);
 
     @Override
     public void run()
@@ -88,10 +93,11 @@ public abstract class AbstractFinalizeReleaseTask
             checkVersion(version, branchReleaseVersion);
         }
 
-        updatePom(getPomFile(repository.getDirectory()), version);
-
+        updatePomBeforeReleasePrepare(getPomFile(repository.getDirectory()), version);
         maven.releasePrepare(version.getVersion(), version.getNextMinorVersion().getSnapshotVersion(), version.getVersion());
         maven.releaseClean();
+        updatePomAfterReleasePrepare(getPomFile(repository.getDirectory()), version);
+
         git.push(UPSTREAM, releaseBranch, true);
         log.info("Release finalized: %s", version.getVersion());
     }
