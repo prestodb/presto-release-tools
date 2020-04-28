@@ -31,7 +31,12 @@ public class FinalizeReleaseTask
     }
 
     @Override
-    protected void updatePom(File pomFile, MavenVersion releaseVersion)
+    protected void updatePomBeforeReleasePrepare(File pomFile, MavenVersion releaseVersion)
+    {
+    }
+
+    @Override
+    protected void updatePomAfterReleasePrepare(File pomFile, MavenVersion releaseVersion)
     {
     }
 }
