@@ -18,17 +18,17 @@ import org.testng.annotations.Test;
 import java.io.File;
 import java.util.regex.Pattern;
 
-import static com.facebook.presto.release.maven.MavenVersion.fromDirectory;
-import static com.facebook.presto.release.maven.MavenVersion.fromPom;
-import static com.facebook.presto.release.maven.MavenVersion.fromReleaseVersion;
-import static com.facebook.presto.release.maven.MavenVersion.fromSnapshotVersion;
+import static com.facebook.presto.release.maven.PrestoVersion.fromDirectory;
+import static com.facebook.presto.release.maven.PrestoVersion.fromPom;
+import static com.facebook.presto.release.maven.PrestoVersion.fromReleaseVersion;
+import static com.facebook.presto.release.maven.PrestoVersion.fromSnapshotVersion;
 import static com.google.common.io.Resources.getResource;
 import static java.lang.String.format;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 
-public class TestMavenVersion
+public class TestPrestoVersion
 {
     @Test
     public void testReleaseVersion()

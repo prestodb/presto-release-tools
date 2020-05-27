@@ -21,6 +21,7 @@ import com.facebook.presto.release.git.GitRepository;
 import com.facebook.presto.release.git.GithubAction;
 import com.facebook.presto.release.git.PullRequest;
 import com.facebook.presto.release.maven.MavenVersion;
+import com.facebook.presto.release.maven.PrestoVersion;
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
@@ -100,14 +101,14 @@ public class GenerateReleaseNotesTask
         this.git = requireNonNull(git, "git is null");
         this.repository = requireNonNull(git.getRepository(), "repository is null");
         this.githubAction = requireNonNull(githubAction, "githubAction is null");
-        this.version = config.getVersion().map(MavenVersion::fromReleaseVersion);
+        this.version = config.getVersion().map(PrestoVersion::fromReleaseVersion);
     }
 
     @Override
     public void run()
     {
         sanitizeRepository(git);
-        MavenVersion version = this.version.orElseGet(() -> MavenVersion.fromDirectory(repository.getDirectory()).getLastMajorVersion());
+        MavenVersion version = this.version.orElseGet(() -> PrestoVersion.fromDirectory(repository.getDirectory()).getLastMajorVersion());
 
         log.info("Release version: %s, Last Version: %s", version.getVersion(), version.getLastMajorVersion().getVersion());
         List<String> commitIds = Splitter.on("\n")
