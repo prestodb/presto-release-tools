@@ -18,6 +18,7 @@ import com.facebook.presto.release.git.Git;
 import com.facebook.presto.release.git.GitRepository;
 import com.facebook.presto.release.maven.Maven;
 import com.facebook.presto.release.maven.MavenVersion;
+import com.facebook.presto.release.maven.PrestoVersion;
 
 import java.io.File;
 import java.util.Optional;
@@ -47,7 +48,7 @@ public abstract class AbstractCutReleaseTask
         this.git = requireNonNull(git, "git is null");
         this.repository = requireNonNull(git.getRepository(), "repository is null");
         this.maven = requireNonNull(maven, "maven is null");
-        this.releaseVersion = requireNonNull(config.getReleaseVersion(), "releaseVersion is null");
+        this.releaseVersion = config.getReleaseVersion().map(PrestoVersion::fromReleaseVersion);
     }
 
     /**
@@ -59,7 +60,7 @@ public abstract class AbstractCutReleaseTask
     public void run()
     {
         sanitizeRepository(git);
-        MavenVersion version = MavenVersion.fromDirectory(repository.getDirectory());
+        MavenVersion version = PrestoVersion.fromDirectory(repository.getDirectory());
         releaseVersion.ifPresent(mavenVersion -> checkVersion(mavenVersion, version));
         checkTags(git, version);
         checkReleaseNotCut(git, version);

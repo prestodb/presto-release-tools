@@ -28,7 +28,7 @@ import java.io.File;
 import java.io.IOException;
 
 import static com.facebook.presto.release.git.TestingGitUtil.getCheckoutReleaseBranchAction;
-import static com.facebook.presto.release.maven.MavenVersion.fromReleaseVersion;
+import static com.facebook.presto.release.maven.PrestoVersion.fromReleaseVersion;
 import static com.google.common.io.Files.copy;
 import static com.google.common.io.Files.createTempDir;
 import static com.google.common.io.MoreFiles.deleteRecursively;

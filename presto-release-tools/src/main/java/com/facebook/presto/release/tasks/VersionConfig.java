@@ -14,7 +14,6 @@
 package com.facebook.presto.release.tasks;
 
 import com.facebook.airlift.configuration.Config;
-import com.facebook.presto.release.maven.MavenVersion;
 
 import javax.validation.constraints.NotNull;
 
@@ -22,10 +21,10 @@ import java.util.Optional;
 
 public class VersionConfig
 {
-    private Optional<MavenVersion> releaseVersion = Optional.empty();
+    private Optional<String> releaseVersion = Optional.empty();
 
     @NotNull
-    public Optional<MavenVersion> getReleaseVersion()
+    public Optional<String> getReleaseVersion()
     {
         return releaseVersion;
     }
@@ -33,14 +32,7 @@ public class VersionConfig
     @Config("release-version")
     public VersionConfig setReleaseVersion(String releaseVersion)
     {
-        if (releaseVersion != null) {
-            try {
-                this.releaseVersion = Optional.of(MavenVersion.fromReleaseVersion(releaseVersion));
-            }
-            catch (IllegalArgumentException e) {
-                // ignore
-            }
-        }
+        this.releaseVersion = Optional.ofNullable(releaseVersion);
         return this;
     }
 }

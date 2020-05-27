@@ -19,6 +19,7 @@ import com.facebook.presto.release.git.Git;
 import com.facebook.presto.release.git.GitRepository;
 import com.facebook.presto.release.maven.Maven;
 import com.facebook.presto.release.maven.MavenVersion;
+import com.facebook.presto.release.maven.PrestoVersion;
 
 import java.io.File;
 import java.util.Optional;
@@ -49,7 +50,7 @@ public abstract class AbstractFinalizeReleaseTask
         this.git = requireNonNull(git, "git is null");
         this.repository = requireNonNull(git.getRepository(), "repository is null");
         this.maven = requireNonNull(maven, "maven is null");
-        this.releaseVersion = requireNonNull(config.getReleaseVersion(), "releaseVersion is null");
+        this.releaseVersion = config.getReleaseVersion().map(PrestoVersion::fromReleaseVersion);
     }
 
     protected Git getGit()
@@ -71,7 +72,7 @@ public abstract class AbstractFinalizeReleaseTask
     public void run()
     {
         sanitizeRepository(git);
-        MavenVersion masterReleaseVersion = MavenVersion.fromDirectory(repository.getDirectory()).getLastMajorVersion();
+        MavenVersion masterReleaseVersion = PrestoVersion.fromDirectory(repository.getDirectory()).getLastMajorVersion();
         if (releaseVersion.isPresent() && !releaseVersion.get().isHotFixVersion()) {
             checkVersion(releaseVersion.get(), masterReleaseVersion);
         }
@@ -89,7 +90,7 @@ public abstract class AbstractFinalizeReleaseTask
         }
         git.checkout(Optional.of(format("%s/%s", repository.getUpstreamName(), releaseBranch)), Optional.of(releaseBranch));
         if (version.isHotFixVersion()) {
-            MavenVersion branchReleaseVersion = MavenVersion.fromDirectory(repository.getDirectory());
+            MavenVersion branchReleaseVersion = PrestoVersion.fromDirectory(repository.getDirectory());
             checkVersion(version, branchReleaseVersion);
         }
 
