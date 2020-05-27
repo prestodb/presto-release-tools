@@ -16,27 +16,27 @@ package com.facebook.presto.release.tasks;
 import com.facebook.presto.release.ForPresto;
 import com.facebook.presto.release.git.Git;
 import com.facebook.presto.release.maven.Maven;
-import com.facebook.presto.release.maven.MavenVersion;
+import com.facebook.presto.release.maven.PrestoVersion;
 import com.google.inject.Inject;
 
 import java.io.File;
 
 public class FinalizeReleaseTask
-        extends AbstractFinalizeReleaseTask
+        extends AbstractFinalizeReleaseTask<PrestoVersion>
 {
     @Inject
     public FinalizeReleaseTask(@ForPresto Git git, @ForPresto Maven maven, VersionConfig config)
     {
-        super(git, maven, config);
+        super(git, maven, PrestoVersion::create, config);
     }
 
     @Override
-    protected void updatePomBeforeReleasePrepare(File pomFile, MavenVersion releaseVersion)
+    protected void updatePomBeforeReleasePrepare(File pomFile, PrestoVersion releaseVersion)
     {
     }
 
     @Override
-    protected void updatePomAfterReleasePrepare(File pomFile, MavenVersion releaseVersion)
+    protected void updatePomAfterReleasePrepare(File pomFile, PrestoVersion releaseVersion)
     {
     }
 }

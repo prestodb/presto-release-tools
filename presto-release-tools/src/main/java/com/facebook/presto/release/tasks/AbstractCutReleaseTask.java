@@ -55,13 +55,13 @@ public abstract class AbstractCutReleaseTask
     /**
      * Perform a custom update to the pom file.
      */
-    protected abstract void updatePom(File pomFile, MavenVersion releaseVersion);
+    protected abstract void updatePom(File pomFile, PrestoVersion releaseVersion);
 
     @Override
     public void run()
     {
         sanitizeRepository(git);
-        MavenVersion version = PrestoVersion.create(getVersionFromPom(repository.getDirectory()));
+        PrestoVersion version = PrestoVersion.create(getVersionFromPom(repository.getDirectory()));
         releaseVersion.ifPresent(mavenVersion -> checkVersion(mavenVersion, version));
         checkTags(git, version);
         checkReleaseNotCut(git, version);

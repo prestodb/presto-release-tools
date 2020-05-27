@@ -19,7 +19,7 @@ import com.facebook.presto.release.git.Git;
 import com.facebook.presto.release.git.GitRepository;
 import com.facebook.presto.release.maven.Maven;
 import com.facebook.presto.release.maven.MavenVersion;
-import com.facebook.presto.release.maven.PrestoVersion;
+import com.facebook.presto.release.maven.MavenVersionFactory;
 
 import java.io.File;
 import java.util.Optional;
@@ -35,7 +35,7 @@ import static com.facebook.presto.release.maven.MavenVersionUtil.getVersionFromP
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
-public abstract class AbstractFinalizeReleaseTask
+public abstract class AbstractFinalizeReleaseTask<T extends MavenVersion>
         implements ReleaseTask
 {
     private static final Logger log = Logger.get(AbstractCutReleaseTask.class);
@@ -43,15 +43,17 @@ public abstract class AbstractFinalizeReleaseTask
     private final Git git;
     private final GitRepository repository;
     private final Maven maven;
+    private final MavenVersionFactory<T> versionFactory;
 
-    private final Optional<MavenVersion> releaseVersion;
+    private final Optional<T> releaseVersion;
 
-    public AbstractFinalizeReleaseTask(Git git, Maven maven, VersionConfig config)
+    public AbstractFinalizeReleaseTask(Git git, Maven maven, MavenVersionFactory<T> versionFactory, VersionConfig config)
     {
         this.git = requireNonNull(git, "git is null");
         this.repository = requireNonNull(git.getRepository(), "repository is null");
         this.maven = requireNonNull(maven, "maven is null");
-        this.releaseVersion = config.getReleaseVersion().map(PrestoVersion::create);
+        this.versionFactory = requireNonNull(versionFactory, "versionFactory is null");
+        this.releaseVersion = config.getReleaseVersion().map(versionFactory::create);
     }
 
     protected Git getGit()
@@ -62,22 +64,23 @@ public abstract class AbstractFinalizeReleaseTask
     /**
      * Perform a custom update to the pom file before mvn release:prepare.
      */
-    protected abstract void updatePomBeforeReleasePrepare(File pomFile, MavenVersion releaseVersion);
+    protected abstract void updatePomBeforeReleasePrepare(File pomFile, T releaseVersion);
 
     /**
      * Perform a custom update to the pom file after mvn release:prepare.
      */
-    protected abstract void updatePomAfterReleasePrepare(File pomFile, MavenVersion releaseVersion);
+    protected abstract void updatePomAfterReleasePrepare(File pomFile, T releaseVersion);
 
     @Override
     public void run()
     {
         sanitizeRepository(git);
-        MavenVersion masterReleaseVersion = PrestoVersion.create(getVersionFromPom(repository.getDirectory())).getLastMajorVersion();
+        @SuppressWarnings("unchecked")
+        T masterReleaseVersion = (T) versionFactory.create(getVersionFromPom(repository.getDirectory())).getLastMajorVersion();
         if (releaseVersion.isPresent() && !releaseVersion.get().isHotFixVersion()) {
             checkVersion(releaseVersion.get(), masterReleaseVersion);
         }
-        MavenVersion version = releaseVersion.orElse(masterReleaseVersion);
+        T version = releaseVersion.orElse(masterReleaseVersion);
         checkTags(git, version);
         checkReleaseCut(git, version);
 
@@ -90,7 +93,7 @@ public abstract class AbstractFinalizeReleaseTask
         }
         git.checkout(Optional.of(format("%s/%s", repository.getUpstreamName(), releaseBranch)), Optional.of(releaseBranch));
         if (version.isHotFixVersion()) {
-            MavenVersion branchReleaseVersion = PrestoVersion.create(getVersionFromPom(repository.getDirectory()));
+            MavenVersion branchReleaseVersion = versionFactory.create(getVersionFromPom(repository.getDirectory()));
             checkVersion(version, branchReleaseVersion);
         }
 
