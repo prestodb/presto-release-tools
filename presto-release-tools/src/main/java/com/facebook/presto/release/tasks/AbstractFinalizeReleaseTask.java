@@ -77,11 +77,10 @@ public abstract class AbstractFinalizeReleaseTask
             checkVersion(releaseVersion.get(), masterReleaseVersion);
         }
         MavenVersion version = releaseVersion.orElse(masterReleaseVersion);
-        MavenVersion majorVersion = version.getMajorVersion();
         checkTags(git, version);
-        checkReleaseCut(git, majorVersion);
+        checkReleaseCut(git, version);
 
-        String releaseBranch = getReleaseBranch(majorVersion);
+        String releaseBranch = getReleaseBranch(version);
         try {
             git.deleteBranch(releaseBranch);
         }
