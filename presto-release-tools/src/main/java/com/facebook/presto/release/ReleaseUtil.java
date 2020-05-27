@@ -79,16 +79,16 @@ public class ReleaseUtil
 
     public static void checkReleaseCut(Git git, MavenVersion version)
     {
-        checkState(!git.listUpstreamHeads(getReleaseBranch(version)).isEmpty(), "Release %s has not been cut", version.getVersion());
+        checkState(!git.listUpstreamHeads(getReleaseBranch(version)).isEmpty(), "Release %s has not been cut", version.getMajorVersion());
     }
 
     public static void checkReleaseNotCut(Git git, MavenVersion version)
     {
-        checkState(git.listUpstreamHeads(getReleaseBranch(version)).isEmpty(), "Release %s is already cut", version.getVersion());
+        checkState(git.listUpstreamHeads(getReleaseBranch(version)).isEmpty(), "Release %s is already cut", version.getMajorVersion());
     }
 
     public static String getReleaseBranch(MavenVersion version)
     {
-        return RELEASE_BRANCH_PREFIX + version.getVersion();
+        return RELEASE_BRANCH_PREFIX + version.getMajorVersion();
     }
 }
