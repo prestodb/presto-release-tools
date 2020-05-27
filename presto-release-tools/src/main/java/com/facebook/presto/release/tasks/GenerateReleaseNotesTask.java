@@ -50,6 +50,7 @@ import java.util.stream.IntStream;
 
 import static com.facebook.presto.release.ReleaseUtil.sanitizeRepository;
 import static com.facebook.presto.release.git.Git.RemoteType.ORIGIN;
+import static com.facebook.presto.release.maven.MavenVersionUtil.getVersionFromPom;
 import static com.facebook.presto.release.tasks.GenerateReleaseNotesTask.ExtractionStatus.EXPECT_DASHES_OR_RELEASE_NOTE;
 import static com.facebook.presto.release.tasks.GenerateReleaseNotesTask.ExtractionStatus.EXPECT_LINE;
 import static com.facebook.presto.release.tasks.GenerateReleaseNotesTask.ExtractionStatus.EXPECT_SECTION_HEADER;
@@ -101,14 +102,14 @@ public class GenerateReleaseNotesTask
         this.git = requireNonNull(git, "git is null");
         this.repository = requireNonNull(git.getRepository(), "repository is null");
         this.githubAction = requireNonNull(githubAction, "githubAction is null");
-        this.version = config.getVersion().map(PrestoVersion::fromReleaseVersion);
+        this.version = config.getVersion().map(PrestoVersion::create);
     }
 
     @Override
     public void run()
     {
         sanitizeRepository(git);
-        MavenVersion version = this.version.orElseGet(() -> PrestoVersion.fromDirectory(repository.getDirectory()).getLastMajorVersion());
+        MavenVersion version = this.version.orElseGet(() -> PrestoVersion.create(getVersionFromPom(repository.getDirectory())).getLastMajorVersion());
 
         log.info("Release version: %s, Last Version: %s", version.getVersion(), version.getLastMajorVersion().getVersion());
         List<String> commitIds = Splitter.on("\n")
