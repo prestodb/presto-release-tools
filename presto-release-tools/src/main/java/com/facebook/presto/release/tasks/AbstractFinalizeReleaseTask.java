@@ -31,6 +31,7 @@ import static com.facebook.presto.release.ReleaseUtil.getPomFile;
 import static com.facebook.presto.release.ReleaseUtil.getReleaseBranch;
 import static com.facebook.presto.release.ReleaseUtil.sanitizeRepository;
 import static com.facebook.presto.release.git.Git.RemoteType.UPSTREAM;
+import static com.facebook.presto.release.maven.MavenVersionUtil.getVersionFromPom;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
@@ -50,7 +51,7 @@ public abstract class AbstractFinalizeReleaseTask
         this.git = requireNonNull(git, "git is null");
         this.repository = requireNonNull(git.getRepository(), "repository is null");
         this.maven = requireNonNull(maven, "maven is null");
-        this.releaseVersion = config.getReleaseVersion().map(PrestoVersion::fromReleaseVersion);
+        this.releaseVersion = config.getReleaseVersion().map(PrestoVersion::create);
     }
 
     protected Git getGit()
@@ -72,7 +73,7 @@ public abstract class AbstractFinalizeReleaseTask
     public void run()
     {
         sanitizeRepository(git);
-        MavenVersion masterReleaseVersion = PrestoVersion.fromDirectory(repository.getDirectory()).getLastMajorVersion();
+        MavenVersion masterReleaseVersion = PrestoVersion.create(getVersionFromPom(repository.getDirectory())).getLastMajorVersion();
         if (releaseVersion.isPresent() && !releaseVersion.get().isHotFixVersion()) {
             checkVersion(releaseVersion.get(), masterReleaseVersion);
         }
@@ -89,7 +90,7 @@ public abstract class AbstractFinalizeReleaseTask
         }
         git.checkout(Optional.of(format("%s/%s", repository.getUpstreamName(), releaseBranch)), Optional.of(releaseBranch));
         if (version.isHotFixVersion()) {
-            MavenVersion branchReleaseVersion = PrestoVersion.fromDirectory(repository.getDirectory());
+            MavenVersion branchReleaseVersion = PrestoVersion.create(getVersionFromPom(repository.getDirectory()));
             checkVersion(version, branchReleaseVersion);
         }
 

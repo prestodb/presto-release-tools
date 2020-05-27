@@ -28,7 +28,7 @@ import java.io.File;
 import java.io.IOException;
 
 import static com.facebook.presto.release.git.TestingGitUtil.getCheckoutReleaseBranchAction;
-import static com.facebook.presto.release.maven.PrestoVersion.fromReleaseVersion;
+import static com.facebook.presto.release.maven.PrestoVersion.create;
 import static com.google.common.io.Files.copy;
 import static com.google.common.io.Files.createTempDir;
 import static com.google.common.io.MoreFiles.deleteRecursively;
@@ -75,7 +75,7 @@ public class TestFinalizeReleaseTask
     @Test
     public void testFinalizeRelease()
     {
-        git.setCheckoutAction(getCheckoutReleaseBranchAction(pomFile, fromReleaseVersion("0.231"))).setUpstreamHeads("0.231").setTags("0.230");
+        git.setCheckoutAction(getCheckoutReleaseBranchAction(pomFile, create("0.231"))).setUpstreamHeads("0.231").setTags("0.230");
         createTask(new VersionConfig()).run();
         assertCommands(commandLogger);
     }
@@ -83,7 +83,7 @@ public class TestFinalizeReleaseTask
     @Test
     public void testFinalizeReleaseExplicit()
     {
-        git.setCheckoutAction(getCheckoutReleaseBranchAction(pomFile, fromReleaseVersion("0.231"))).setUpstreamHeads("0.231").setTags("0.230");
+        git.setCheckoutAction(getCheckoutReleaseBranchAction(pomFile, create("0.231"))).setUpstreamHeads("0.231").setTags("0.230");
         createTask(new VersionConfig().setReleaseVersion("0.231")).run();
         assertCommands(commandLogger);
     }
@@ -91,7 +91,7 @@ public class TestFinalizeReleaseTask
     @Test
     public void testFinalizeReleaseHotFix()
     {
-        git.setCheckoutAction(getCheckoutReleaseBranchAction(pomFile, fromReleaseVersion("0.231.1"))).setUpstreamHeads("0.231").setTags("0.231");
+        git.setCheckoutAction(getCheckoutReleaseBranchAction(pomFile, create("0.231.1"))).setUpstreamHeads("0.231").setTags("0.231");
         createTask(new VersionConfig().setReleaseVersion("0.231.1")).run();
         assertCommandsHotFix(commandLogger);
     }
