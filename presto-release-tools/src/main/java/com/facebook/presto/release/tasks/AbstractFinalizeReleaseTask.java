@@ -20,6 +20,7 @@ import com.facebook.presto.release.git.GitRepository;
 import com.facebook.presto.release.maven.Maven;
 import com.facebook.presto.release.maven.MavenVersion;
 import com.facebook.presto.release.maven.MavenVersionFactory;
+import com.facebook.presto.release.maven.PrestoVersion;
 
 import java.io.File;
 import java.util.Optional;
@@ -92,7 +93,7 @@ public abstract class AbstractFinalizeReleaseTask<T extends MavenVersion>
             // ignore
         }
         git.checkout(Optional.of(format("%s/%s", repository.getUpstreamName(), releaseBranch)), Optional.of(releaseBranch));
-        if (version.isHotFixVersion()) {
+        if (version instanceof PrestoVersion && version.isHotFixVersion()) {
             MavenVersion branchReleaseVersion = versionFactory.create(getVersionFromPom(repository.getDirectory()));
             checkVersion(version, branchReleaseVersion);
         }
