@@ -265,6 +265,8 @@ public class GenerateReleaseNotesTask
     private String generateReleaseNotes(MavenVersion version, Map<PullRequest, Optional<List<ReleaseNoteItem>>> releaseNoteItems)
     {
         StringBuilder document = new StringBuilder(format("=============\nRelease %s\n=============\n\n", version.getVersion()));
+        document.append("**Highlights**\n==============\n\n");
+        document.append("**Details**\n===========\n\n");
 
         Multimap<String, ReleaseNoteItem> releaseNotesByCategory = releaseNoteItems.values().stream()
                 .filter(Optional::isPresent)

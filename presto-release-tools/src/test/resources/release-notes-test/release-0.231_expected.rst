@@ -2,6 +2,12 @@
 Release 0.231
 =============
 
+**Highlights**
+==============
+
+**Details**
+===========
+
 SPI Changes
 ___________
 * Change ``ConnectorMetadata#commitPartition`` into async operation, and rename it to ``ConnectorMetadata#commitPartitionAsync``.
