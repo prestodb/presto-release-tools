@@ -77,18 +77,20 @@ public class TestGenerateReleaseNotesTask
     private static final String VERSION = "0.231";
     private static final String COMMIT_HASH_PREFIX = Joiner.on("").join(nCopies(30, "a"));
 
-    private static final Person USER1 = new Person("user1@gmail.com", "user1");
-    private static final Person USER2 = new Person("user2@gmail.com", "user2");
-    private static final Person USER3 = new Person("user3@gmail.com", "user3");
+    private static final Person USER1 = new Person("user1@gmail.com", "A Brown");
+    private static final Person USER1_GITHUB = new Person("user1@gmail.com", "AA Brown");
+    private static final Person USER2 = new Person("user2@gmail.com", "C Davis");
+    private static final Person USER3 = new Person("user3@gmail.com", "E Fisher");
+    private static final Person USER4 = new Person("user4@gmail.com", "G Harris");
 
     private static final AtomicInteger PullRequestId = new AtomicInteger(1);
     private static final AtomicInteger commitId = new AtomicInteger(1);
 
     private static final List<Commit> COMMITS = ImmutableList.<Commit>builder()
             .addAll(createCommits("release notes 1", USER1, USER1, true, 1))
-            .addAll(createCommits("release notes 2", USER2, USER1, true, 2))
+            .addAll(createCommits("release notes 2", USER2, USER1_GITHUB, true, 2))
             .addAll(createCommits("no release note", USER3, USER1, true, 1))
-            .addAll(createCommits("no release notes", USER1, USER2, true, 2))
+            .addAll(createCommits("no release notes", USER1, USER4, true, 2))
             .addAll(createCommits("missing release note", USER3, USER2, true, 2))
             .addAll(createCommits("missing section header 1", USER2, USER1, true, 1))
             .addAll(createCommits("missing section header 2", USER1, USER1, true, 1))
@@ -207,7 +209,7 @@ public class TestGenerateReleaseNotesTask
 
         public User getUser()
         {
-            return new User(name);
+            return new User(login, name);
         }
 
         public GitActor getGitActor()

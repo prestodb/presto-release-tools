@@ -77,6 +77,7 @@ public class GithubGraphQlAction
             "                                      }\n" +
             "                                      mergedBy {\n" +
             "                                          ... on User {\n" +
+            "                                              login\n" +
             "                                              name\n" +
             "                                          }\n" +
             "                                      }\n" +

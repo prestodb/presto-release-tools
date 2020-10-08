@@ -28,7 +28,7 @@ public class PullRequest
     private final String url;
     private final String description;
     private final String authorLogin;
-    private final Optional<String> mergedBy;
+    private final Optional<User> mergedBy;
 
     @JsonCreator
     public PullRequest(
@@ -44,7 +44,7 @@ public class PullRequest
         this.url = requireNonNull(url, "url is null");
         this.description = requireNonNull(description, "description is null");
         this.authorLogin = requireNonNull(author.getLogin(), "authorLogin is null");
-        this.mergedBy = Optional.ofNullable(mergedBy).flatMap(User::getName);
+        this.mergedBy = Optional.ofNullable(mergedBy);
     }
 
     public int getId()
@@ -72,7 +72,7 @@ public class PullRequest
         return authorLogin;
     }
 
-    public Optional<String> getMergedBy()
+    public Optional<User> getMergedBy()
     {
         return mergedBy;
     }

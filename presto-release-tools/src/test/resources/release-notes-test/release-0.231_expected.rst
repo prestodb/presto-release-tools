@@ -21,3 +21,8 @@ ______________
 * Rename error code from ``RAPTOR_LOCAL_FILE_SYSTEM_ERROR`` to ``RAPTOR_FILE_SYSTEM_ERROR``.
 * Remove unused FilterVoidLambda interface in ArrayFilterFunction.
 * Change ``storage.data-directory` from path to URI. For existing deployment on local flash, a scheme header "file://" should be added to the original config value.
+
+**Contributors**
+================
+
+A Brown, C Davis, E Fisher, G Harris
