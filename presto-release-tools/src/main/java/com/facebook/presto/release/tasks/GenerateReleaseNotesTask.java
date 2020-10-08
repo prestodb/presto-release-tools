@@ -35,6 +35,7 @@ import javax.inject.Inject;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -148,10 +149,18 @@ public class GenerateReleaseNotesTask
                 userByLogin.putIfAbsent(pullRequest.getAuthorLogin(), commit.getAuthor());
             }
         }
+
+        log.info("Collecting committer information");
+        for (PullRequest pullRequest : pullRequests) {
+            if (pullRequest.getMergedBy().isPresent()) {
+                String login = pullRequest.getMergedBy().get().getLogin();
+                userByLogin.putIfAbsent(login, pullRequest.getMergedBy().get().getName().orElse(login));
+            }
+        }
         userByLogin = ImmutableMap.copyOf(userByLogin);
 
         log.info("Generating release notes");
-        String releaseNotes = generateReleaseNotes(version, releaseNoteItems);
+        String releaseNotes = generateReleaseNotes(version, releaseNoteItems, userByLogin.values());
         String releaseNotesSummary = format(
                 "%s\n%s\n%s",
                 generateMissingReleaseNotes(releaseNoteItems, commits, userByLogin),
@@ -262,7 +271,10 @@ public class GenerateReleaseNotesTask
         return Optional.empty();
     }
 
-    private String generateReleaseNotes(MavenVersion version, Map<PullRequest, Optional<List<ReleaseNoteItem>>> releaseNoteItems)
+    private String generateReleaseNotes(
+            MavenVersion version,
+            Map<PullRequest, Optional<List<ReleaseNoteItem>>> releaseNoteItems,
+            Collection<String> contributors)
     {
         StringBuilder document = new StringBuilder(format("=============\nRelease %s\n=============\n\n", version.getVersion()));
         document.append("**Highlights**\n==============\n\n");
@@ -289,10 +301,15 @@ public class GenerateReleaseNotesTask
             }
             document.append("\n\n");
         }
+
+        List<String> names = new ArrayList<>(contributors);
+        sort(names);
+        document.append("**Contributors**\n================\n\n")
+                .append(Joiner.on(", ").join(names));
         return document.toString().trim() + "\n";
     }
 
-    private String generateMissingReleaseNotes(Map<PullRequest, Optional<List<ReleaseNoteItem>>> releaseNoteItems, List<Commit> commits, Map<String, String> userByLogin)
+    private String generateMissingReleaseNotes(Map<PullRequest, Optional<List<ReleaseNoteItem>>> releaseNoteItems, List<Commit> commits, Map<String, String> authorByLogin)
     {
         List<PullRequest> pullRequestsMissingReleaseNotes = releaseNoteItems.entrySet().stream()
                 .filter(entry -> !entry.getValue().isPresent())
@@ -304,7 +321,7 @@ public class GenerateReleaseNotesTask
 
         Map<String, StringBuilder> missingByAuthor = new TreeMap<>();
         for (PullRequest pullRequest : pullRequestsMissingReleaseNotes) {
-            String author = userByLogin.get(pullRequest.getAuthorLogin());
+            String author = authorByLogin.get(pullRequest.getAuthorLogin());
             missingByAuthor.putIfAbsent(author, new StringBuilder("## ").append(author).append("\n"));
             StringBuilder missing = missingByAuthor.get(author);
             missing.append("- [ ] ")
@@ -313,7 +330,7 @@ public class GenerateReleaseNotesTask
                     .append(pullRequest.getTitle());
             if (pullRequest.getMergedBy().isPresent()) {
                 missing.append(" (Merged by: ")
-                        .append(pullRequest.getMergedBy().get())
+                        .append(pullRequest.getMergedBy().get().getName().orElse(pullRequest.getMergedBy().get().getLogin()))
                         .append(")");
             }
             missing.append("\n");
@@ -334,7 +351,7 @@ public class GenerateReleaseNotesTask
                         .collect(joining("\n"));
     }
 
-    private String generateExtractedReleaseNotes(Map<PullRequest, Optional<List<ReleaseNoteItem>>> releaseNoteItems, Map<String, String> userByLogin)
+    private String generateExtractedReleaseNotes(Map<PullRequest, Optional<List<ReleaseNoteItem>>> releaseNoteItems, Map<String, String> authorByLogin)
     {
         StringBuilder document = new StringBuilder("# Extracted Release Notes\n");
 
@@ -349,7 +366,7 @@ public class GenerateReleaseNotesTask
             document.append("- #")
                     .append(pullRequest.getId())
                     .append(" (Author: ")
-                    .append(userByLogin.get(pullRequest.getAuthorLogin()))
+                    .append(authorByLogin.get(pullRequest.getAuthorLogin()))
                     .append("): ")
                     .append(pullRequest.getTitle())
                     .append("\n");

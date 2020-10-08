@@ -19,12 +19,14 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Optional;
 
 public class User
+        extends Actor
 {
     private final Optional<String> name;
 
     @JsonCreator
-    public User(@JsonProperty("name") String name)
+    public User(@JsonProperty("login") String login, @JsonProperty("name") String name)
     {
+        super(login);
         this.name = Optional.ofNullable(name);
     }
 
