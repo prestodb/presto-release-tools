@@ -304,7 +304,7 @@ public class GenerateReleaseNotesTask
 
         List<String> names = new ArrayList<>(contributors);
         sort(names);
-        document.append("**Contributors**\n================\n\n")
+        document.append("**Credits**\n===========\n\n")
                 .append(Joiner.on(", ").join(names));
         return document.toString().trim() + "\n";
     }
