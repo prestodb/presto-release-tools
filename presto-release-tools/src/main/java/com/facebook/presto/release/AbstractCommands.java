@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static com.google.common.io.Files.asCharSource;
+import static com.google.common.io.MoreFiles.asCharSource;
 import static java.lang.String.format;
 import static java.lang.Thread.currentThread;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -81,7 +82,13 @@ public abstract class AbstractCommands
             process.waitFor();
 
             if (process.exitValue() != 0) {
-                readFromStream(process.getErrorStream()).ifPresent(log::error);
+                try {
+                    log.error(asCharSource(logFile.toPath(), UTF_8).read());
+                    readFromStream(process.getErrorStream()).ifPresent(log::error);
+                }
+                catch (IOException e) {
+                    log.error(e, "Failed to print the content of log file: %s", logFile);
+                }
                 throw new CommandException(process.exitValue());
             }
 
