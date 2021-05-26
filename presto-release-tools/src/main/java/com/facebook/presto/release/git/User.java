@@ -16,6 +16,7 @@ package com.facebook.presto.release.git;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.Objects;
 import java.util.Optional;
 
 public class User
@@ -33,5 +34,25 @@ public class User
     public Optional<String> getName()
     {
         return name;
+    }
+
+    @Override
+    public boolean equals(Object obj)
+    {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null || getClass() != obj.getClass()) {
+            return false;
+        }
+        User that = (User) obj;
+        return Objects.equals(getLogin(), that.getLogin()) &&
+                Objects.equals(getName(), that.getName());
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash(getLogin(), getName());
     }
 }

@@ -148,9 +148,8 @@ public class TestGenerateReleaseNotesTask
                 new GenerateReleaseNotesConfig().setVersion(VERSION));
     }
 
-    private static PullRequest loadPullRequest(String title, Person author, Person mergedBy)
+    private static PullRequest loadPullRequest(int id, String title, Person author, Person mergedBy)
     {
-        int id = PullRequestId.getAndIncrement();
         String fileName = title.replace(' ', '_') + ".txt";
 
         try {
@@ -169,14 +168,15 @@ public class TestGenerateReleaseNotesTask
 
     private static List<Commit> createCommits(String title, Person author, Person mergedBy, boolean associateWithPullRequest, int commitCount)
     {
-        List<PullRequest> associatedPullRequests = associateWithPullRequest ? ImmutableList.of(loadPullRequest(title, author, mergedBy)) : ImmutableList.of();
+        // We need to create different instances of the same PullRequest for each commit in order to test that object comparison is implemented correctly
+        int id = associateWithPullRequest ? PullRequestId.getAndIncrement() : 0;
 
         return IntStream.range(0, commitCount).mapToObj(
                 i -> new Commit(
                         format("%s%02d", COMMIT_HASH_PREFIX, commitId.getAndIncrement()),
                         author.getGitActor(),
                         format("%s - commit #%s", title, i + 1),
-                        ImmutableMap.of("nodes", associatedPullRequests)))
+                        ImmutableMap.of("nodes", associateWithPullRequest ? ImmutableList.of(loadPullRequest(id, title, author, mergedBy)) : ImmutableList.of())))
                 .collect(toImmutableList());
     }
 
