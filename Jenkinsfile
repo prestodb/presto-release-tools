@@ -112,6 +112,12 @@ pipeline {
             }
         }
 
+        stage('Release to Maven Central') {
+            steps {
+                echo 'release all jars to Maven Central'
+            }
+        }
+
         stage ('Create Release Tarballs') {
             steps {
                 withCredentials([[
