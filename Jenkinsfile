@@ -103,8 +103,8 @@ pipeline {
                             script: 'scripts/get-releasable-docker-image-tag.sh',
                             returnStdout: true).trim()
                         env.PRESTO_BUILD_VERSION = env.DOCKER_IMAGE_TAG.substring(0, env.DOCKER_IMAGE_TAG.lastIndexOf('-'));
-                        env.PRESTO_RELEASE_SHA = env.PRESTO_BUILD_VERSION.substring(env.DOCKER_IMAGE_TAG.lastIndexOf('-') + 1);
-                    '''
+                        env.PRESTO_RELEASE_SHA = env.PRESTO_BUILD_VERSION.substring(env.PRESTO_BUILD_VERSION.lastIndexOf('-') + 1);
+                    }
                 }
                 sh 'printenv | sort'
                 echo "${AWS_S3_PREFIX}/${PRESTO_BUILD_VERSION}/presto-server-${PRESTO_RELEASE_VERSION}.tar.gz"
