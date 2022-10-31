@@ -127,7 +127,7 @@ pipeline {
                         secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
                     script {
                         sh '''
-                            aws s3 cp "${AWS_S3_PREFIX}/${PRESTO_BUILD_VERSION}" ""${AWS_S3_PREFIX}/${PRESTO_RELEASE_VERSION}"
+                            aws s3 cp "${AWS_S3_PREFIX}/${PRESTO_BUILD_VERSION}" "${AWS_S3_PREFIX}/${PRESTO_RELEASE_VERSION}"
                         '''
                     }
                 }
