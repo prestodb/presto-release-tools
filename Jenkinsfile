@@ -111,6 +111,47 @@ pipeline {
                 echo "${AWS_ECR}/oss-presto/presto:${DOCKER_IMAGE_TAG}"
             }
         }
+
+        stage ('Create Release Tarballs') {
+            steps {
+                withCredentials([[
+                        $class: 'AmazonWebServicesCredentialsBinding',
+                        credentialsId: "${AWS_CREDENTIAL_ID}",
+                        accessKeyVariable: 'AWS_ACCESS_KEY_ID',
+                        secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
+                    script {
+                        sh '''
+                            aws s3 cp "${AWS_S3_PREFIX}/${PRESTO_BUILD_VERSION}" ""${AWS_S3_PREFIX}/${PRESTO_RELEASE_VERSION}"
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage ('Create Release Docker Image') {
+            agent {
+                kubernetes {
+                    defaultContainer 'dind'
+                    yamlFile 'agent-dind.yaml'
+                }
+            }
+            steps {
+                withCredentials([[
+                        $class: 'AmazonWebServicesCredentialsBinding',
+                        credentialsId: "${AWS_CREDENTIAL_ID}",
+                        accessKeyVariable: 'AWS_ACCESS_KEY_ID',
+                        secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
+                    script {
+                        sh '''
+                            docker pull "${AWS_ECR}/oss-presto/presto:${DOCKER_IMAGE_TAG}"
+                            docker tag "${AWS_ECR}/oss-presto/presto:${DOCKER_IMAGE_TAG}" "${AWS_ECR}/oss-presto/presto:${PRESTO_RELEASE_VERSION}"
+                            docker image ls
+                            docker push "${AWS_ECR}/oss-presto/presto:${PRESTO_RELEASE_VERSION}"
+                        '''
+                    }
+                }
+            }
+        }
     }
 
     post {
