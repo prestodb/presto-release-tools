@@ -34,7 +34,7 @@ pipeline {
     stages {
         stage ('Setup') {
             steps {
-                sh 'apt update && apt install -y awscli git tree'
+                sh 'apt update && apt install -y awscli git jq tree'
             }
         }
 
