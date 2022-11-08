@@ -137,7 +137,7 @@ pipeline {
                         secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
                     sh '''
                         aws s3 ls "${AWS_S3_PREFIX}/${PRESTO_BUILD_VERSION}/"
-                        echo "aws s3 cp ${AWS_S3_PREFIX}/${PRESTO_BUILD_VERSION}/ ${AWS_S3_PREFIX}/${PRESTO_EDGE_RELEASE_VERSION}/ --recursive --no-progress"
+                        aws s3 cp ${AWS_S3_PREFIX}/${PRESTO_BUILD_VERSION}/ ${AWS_S3_PREFIX}/${PRESTO_EDGE_RELEASE_VERSION}/ --recursive --no-progress
                     '''
                 }
             }
@@ -157,7 +157,7 @@ pipeline {
                             docker pull "${AWS_ECR}/oss-presto/presto:${DOCKER_IMAGE_TAG}"
                             docker tag "${AWS_ECR}/oss-presto/presto:${DOCKER_IMAGE_TAG}" "${AWS_ECR}/oss-presto/presto:${PRESTO_EDGE_RELEASE_VERSION}"
                             docker image ls
-                            echo "docker push ${AWS_ECR}/oss-presto/presto:${PRESTO_EDGE_RELEASE_VERSION}"
+                            docker push ${AWS_ECR}/oss-presto/presto:${PRESTO_EDGE_RELEASE_VERSION}
                         '''
                     }
                 }
@@ -178,8 +178,11 @@ pipeline {
                             git reset --hard
                             git checkout -b ${EDGE_BRANCH}
                             unset MAVEN_CONFIG && ./mvnw --batch-mode release:update-versions -DautoVersionSubmodules=true -DdevelopmentVersion="${PRESTO_EDGE_RELEASE_VERSION}-SNAPSHOT"
+                            git status | grep pom.xml | grep -v versionsBackup  | awk '{print $2}' | xargs git add
                             git status
-                            echo "git push --set-upstream ${ORIGIN} ${EDGE_BRANCH}"
+                            git commit -m "branch of ${PRESTO_EDGE_RELEASE_VERSION}"
+                            git branch
+                            git push --set-upstream ${ORIGIN} ${EDGE_BRANCH}
                         '''
                     }
                 }
