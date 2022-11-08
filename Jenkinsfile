@@ -63,12 +63,6 @@ pipeline {
                          extensions: [[
                              $class: 'RelativeTargetDirectory',
                              relativeTargetDir: 'presto'
-                         ],[
-                             $class: 'CloneOption',
-                             shallow: true,
-                             noTags:  true,
-                             depth:   1,
-                             timeout: 10
                          ]],
                          submoduleCfg: [],
                          userRemoteConfigs: [[
