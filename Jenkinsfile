@@ -3,7 +3,7 @@ pipeline {
     agent {
         kubernetes {
             defaultContainer 'maven'
-            yamlFile 'agent-maven.yaml'
+            yamlFile 'agent.yaml'
         }
     }
 
@@ -76,10 +76,10 @@ pipeline {
                              url: 'https://github.com/prestodb/presto'
                          ]]
                 dir('presto') {
-                    sh 'unset MAVEN_CONFIG && ./mvnw versions:set -DremoveSnapshot'
+                    sh 'unset MAVEN_CONFIG && ./mvnw versions:set -DremoveSnapshot -ntp'
                     script {
                         env.PRESTO_STABLE_RELEASE_VERSION = sh(
-                            script: 'unset MAVEN_CONFIG && ./mvnw org.apache.maven.plugins:maven-help-plugin:3.2.0:evaluate -Dexpression=project.version -q -DforceStdout',
+                            script: 'unset MAVEN_CONFIG && ./mvnw org.apache.maven.plugins:maven-help-plugin:3.2.0:evaluate -Dexpression=project.version -q -ntp -DforceStdout',
                             returnStdout: true).trim()
                     }
                 }
@@ -131,34 +131,29 @@ pipeline {
                         secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
                     sh '''
                         aws s3 ls "${AWS_S3_PREFIX}/${PRESTO_BUILD_VERSION}/"
-                        # aws s3 cp "${AWS_S3_PREFIX}/${PRESTO_BUILD_VERSION}/" "${AWS_S3_PREFIX}/${PRESTO_EDGE_RELEASE_VERSION}/" --recursive --no-progress
+                        aws s3 cp "${AWS_S3_PREFIX}/${PRESTO_BUILD_VERSION}/" "${AWS_S3_PREFIX}/${PRESTO_EDGE_RELEASE_VERSION}/" --recursive --no-progress
                     '''
                 }
             }
         }
 
         stage ('Create Release Docker Image') {
-            agent {
-                kubernetes {
-                    defaultContainer 'dind'
-                    yamlFile 'agent-dind.yaml'
-                }
-            }
-
             steps {
-                sh 'apk update && apk add aws-cli'
-                withCredentials([[
-                        $class: 'AmazonWebServicesCredentialsBinding',
-                        credentialsId: "${AWS_CREDENTIAL_ID}",
-                        accessKeyVariable: 'AWS_ACCESS_KEY_ID',
-                        secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
-                    sh '''
-                        aws ecr get-login-password | docker login --username AWS --password-stdin ${AWS_ECR}
-                        docker pull "${AWS_ECR}/oss-presto/presto:${DOCKER_IMAGE_TAG}"
-                        docker tag "${AWS_ECR}/oss-presto/presto:${DOCKER_IMAGE_TAG}" "${AWS_ECR}/oss-presto/presto:${PRESTO_EDGE_RELEASE_VERSION}"
-                        docker image ls
-                        # docker push "${AWS_ECR}/oss-presto/presto:${PRESTO_EDGE_RELEASE_VERSION}"
-                    '''
+                container('dind') {
+                    sh 'apk update && apk add aws-cli'
+                    withCredentials([[
+                            $class: 'AmazonWebServicesCredentialsBinding',
+                            credentialsId: "${AWS_CREDENTIAL_ID}",
+                            accessKeyVariable: 'AWS_ACCESS_KEY_ID',
+                            secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
+                        sh '''
+                            aws ecr get-login-password | docker login --username AWS --password-stdin ${AWS_ECR}
+                            docker pull "${AWS_ECR}/oss-presto/presto:${DOCKER_IMAGE_TAG}"
+                            docker tag "${AWS_ECR}/oss-presto/presto:${DOCKER_IMAGE_TAG}" "${AWS_ECR}/oss-presto/presto:${PRESTO_EDGE_RELEASE_VERSION}"
+                            docker image ls
+                            docker push "${AWS_ECR}/oss-presto/presto:${PRESTO_EDGE_RELEASE_VERSION}"
+                        '''
+                    }
                 }
             }
         }
@@ -172,7 +167,7 @@ pipeline {
                         git checkout -b ${EDGE_BRANCH}
                         unset MAVEN_CONFIG && ./mvnw --batch-mode release:update-versions -DautoVersionSubmodules=true -DdevelopmentVersion="${PRESTO_EDGE_RELEASE_VERSION}-SNAPSHOT"
                         git status
-                        # git push --set-upstream origin ${EDGE_BRANCH}
+                        echo "git push --set-upstream origin ${EDGE_BRANCH}"
                     '''
                 }
             }
