@@ -117,7 +117,13 @@ pipeline {
                         EDGE_N=$(echo $EDGE_RELEASES | grep -v ^$ | wc -l)
                         PRESTO_EDGE_RELEASE_VERSION="${PRESTO_STABLE_RELEASE_VERSION}-edge$((EDGE_N+1))"
                         echo "new presto edge release version: ${PRESTO_EDGE_RELEASE_VERSION}"
+                        echo ${PRESTO_EDGE_RELEASE_VERSION} > PRESTO_EDGE_RELEASE_VERSION.version
                     '''
+                    script {
+                        env.PRESTO_EDGE_RELEASE_VERSION = sh(
+                            script: 'cat PRESTO_EDGE_RELEASE_VERSION.version',
+                            returnStdout: true).trim()
+                    }
                 }
             }
         }
