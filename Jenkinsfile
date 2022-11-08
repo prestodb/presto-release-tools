@@ -179,7 +179,6 @@ pipeline {
                             git config --global user.name "Linsong Wang"
                             git commit -m "create a new branch for edge release ${PRESTO_EDGE_RELEASE_VERSION}"
                             git push --set-upstream ${ORIGIN} ${EDGE_BRANCH}
-                            git branch -r | grep edge-
                         '''
                     }
                 }
