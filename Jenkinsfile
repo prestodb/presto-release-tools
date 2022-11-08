@@ -3,7 +3,7 @@ pipeline {
     agent {
         kubernetes {
             defaultContainer 'maven'
-            yamlFile 'agent.yaml'
+            yamlFile 'agent-maven.yaml'
         }
     }
 
@@ -20,15 +20,8 @@ pipeline {
         timeout(time: 1, unit: 'HOURS')
     }
 
-    parameters {
-        booleanParam(name: 'RELEASE_DRYRUN',
-                     defaultValue: true,
-                     description: 'dryrun without creating a PR to update master branch'
-        )
-    }
-
     triggers {
-        cron('0 19 1-7 * 2')
+        cron('H 12 * * 2')
     }
 
     stages {
@@ -58,8 +51,10 @@ pipeline {
                              credentialsId: 'github-personal-token-wanglinsong',
                              url: 'https://github.com/prestodb/presto-release-tools'
                          ]]
+                echo 'all Jenkins pipeline related scripts are located in folder ./presto-release-tools/scripts'
             }
         }
+
         stage ('Load Presto Source') {
             steps {
                 checkout $class: 'GitSCM',
@@ -80,19 +75,21 @@ pipeline {
                              credentialsId: 'github-personal-token-wanglinsong',
                              url: 'https://github.com/prestodb/presto'
                          ]]
-                sh 'unset MAVEN_CONFIG && cd presto/ && ./mvnw versions:set -DremoveSnapshot'
-                script {
-                    env.PRESTO_RELEASE_VERSION = sh(
-                        script: 'unset MAVEN_CONFIG && cd presto/ && ./mvnw org.apache.maven.plugins:maven-help-plugin:3.2.0:evaluate -Dexpression=project.version -q -DforceStdout',
-                        returnStdout: true).trim()
+                dir('presto') {
+                    sh 'unset MAVEN_CONFIG && ./mvnw versions:set -DremoveSnapshot'
+                    script {
+                        env.PRESTO_STABLE_RELEASE_VERSION = sh(
+                            script: 'unset MAVEN_CONFIG && ./mvnw org.apache.maven.plugins:maven-help-plugin:3.2.0:evaluate -Dexpression=project.version -q -DforceStdout',
+                            returnStdout: true).trim()
+                    }
                 }
-                echo "Presto release version ${PRESTO_RELEASE_VERSION}"
+                echo "Presto next stable release version ${PRESTO_STABLE_RELEASE_VERSION}"
             }
         }
 
         stage ('Search Artifacts') {
             steps {
-                echo "query for presto docker images with release version ${PRESTO_RELEASE_VERSION}"
+                echo "query for presto docker images with release version ${PRESTO_STABLE_RELEASE_VERSION}"
                 withCredentials([[
                         $class: 'AmazonWebServicesCredentialsBinding',
                         credentialsId: "${AWS_CREDENTIAL_ID}",
@@ -107,29 +104,35 @@ pipeline {
                     }
                 }
                 sh 'printenv | sort'
-                echo "${AWS_S3_PREFIX}/${PRESTO_BUILD_VERSION}/presto-server-${PRESTO_RELEASE_VERSION}.tar.gz"
+                echo "${AWS_S3_PREFIX}/${PRESTO_BUILD_VERSION}/presto-server-${PRESTO_STABLE_RELEASE_VERSION}.tar.gz"
                 echo "${AWS_ECR}/oss-presto/presto:${DOCKER_IMAGE_TAG}"
             }
         }
 
-        stage('Release to Maven Central') {
+        stage ('Set Release Version') {
             steps {
-                echo 'release all jars to Maven Central'
+                dir('presto') {
+                    sh '''
+                        EDGE_RELEASES=$(git branch -r | grep "edge-${PRESTO_STABLE_RELEASE_VERSION}") || EDGE_RELEASES=''
+                        EDGE_N=$(echo $EDGE_RELEASES | grep -v ^$ | wc -l)
+                        PRESTO_EDGE_RELEASE_VERSION="${PRESTO_STABLE_RELEASE_VERSION}-edge$((EDGE_N+1))"
+                        echo "new presto edge release version: ${PRESTO_EDGE_RELEASE_VERSION}"
+                    '''
+                }
             }
         }
 
-        stage ('Create Release Tarballs') {
+        stage ('Create Release Packages') {
             steps {
                 withCredentials([[
                         $class: 'AmazonWebServicesCredentialsBinding',
                         credentialsId: "${AWS_CREDENTIAL_ID}",
                         accessKeyVariable: 'AWS_ACCESS_KEY_ID',
                         secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
-                    script {
-                        sh '''
-                            aws s3 cp "${AWS_S3_PREFIX}/${PRESTO_BUILD_VERSION}/" "${AWS_S3_PREFIX}/${PRESTO_RELEASE_VERSION}/" --recursive
-                        '''
-                    }
+                    sh '''
+                        aws s3 ls "${AWS_S3_PREFIX}/${PRESTO_BUILD_VERSION}/"
+                        # aws s3 cp "${AWS_S3_PREFIX}/${PRESTO_BUILD_VERSION}/" "${AWS_S3_PREFIX}/${PRESTO_EDGE_RELEASE_VERSION}/" --recursive --no-progress
+                    '''
                 }
             }
         }
@@ -141,26 +144,46 @@ pipeline {
                     yamlFile 'agent-dind.yaml'
                 }
             }
+
             steps {
+                sh 'apk update && apk add aws-cli'
                 withCredentials([[
                         $class: 'AmazonWebServicesCredentialsBinding',
                         credentialsId: "${AWS_CREDENTIAL_ID}",
                         accessKeyVariable: 'AWS_ACCESS_KEY_ID',
                         secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
-                    script {
-                        sh '''
-                            docker pull "${AWS_ECR}/oss-presto/presto:${DOCKER_IMAGE_TAG}"
-                            docker tag "${AWS_ECR}/oss-presto/presto:${DOCKER_IMAGE_TAG}" "${AWS_ECR}/oss-presto/presto:${PRESTO_RELEASE_VERSION}"
-                            docker image ls
-                            docker push "${AWS_ECR}/oss-presto/presto:${PRESTO_RELEASE_VERSION}"
-                        '''
-                    }
+                    sh '''
+                        aws ecr get-login-password | docker login --username AWS --password-stdin ${AWS_ECR}
+                        docker pull "${AWS_ECR}/oss-presto/presto:${DOCKER_IMAGE_TAG}"
+                        docker tag "${AWS_ECR}/oss-presto/presto:${DOCKER_IMAGE_TAG}" "${AWS_ECR}/oss-presto/presto:${PRESTO_EDGE_RELEASE_VERSION}"
+                        docker image ls
+                        # docker push "${AWS_ECR}/oss-presto/presto:${PRESTO_EDGE_RELEASE_VERSION}"
+                    '''
+                }
+            }
+        }
+
+        stage ('Create Release Branch') {
+            steps {
+                dir('presto') {
+                    sh '''
+                        EDGE_BRANCH="edge-${PRESTO_EDGE_RELEASE_VERSION}"
+                        git checkout ${PRESTO_RELEASE_SHA}
+                        git checkout -b ${EDGE_BRANCH}
+                        unset MAVEN_CONFIG && ./mvnw --batch-mode release:update-versions -DautoVersionSubmodules=true -DdevelopmentVersion="${PRESTO_EDGE_RELEASE_VERSION}-SNAPSHOT"
+                        git status
+                        # git push --set-upstream origin ${EDGE_BRANCH}
+                    '''
                 }
             }
         }
     }
 
     post {
+        success {
+            echo "release artifacts: ${AWS_S3_PREFIX}/${PRESTO_EDGE_RELEASE_VERSION}/"
+            echo "docker image: ${AWS_ECR}/oss-presto/presto:${PRESTO_EDGE_RELEASE_VERSION}"
+        }
         cleanup {
             cleanWs()
         }
