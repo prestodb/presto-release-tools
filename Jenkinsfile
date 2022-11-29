@@ -107,8 +107,7 @@ pipeline {
             steps {
                 dir('presto') {
                     sh '''
-                        EDGE_RELEASES=$(git branch -r | grep "edge-${PRESTO_STABLE_RELEASE_VERSION}") || EDGE_RELEASES=''
-                        EDGE_N=$(echo $EDGE_RELEASES | grep -v ^$ | wc -l)
+                        EDGE_N=$(git branch -r | grep "release-${PRESTO_STABLE_RELEASE_VERSION}-edge[0-9]$" | wc -l)
                         PRESTO_EDGE_RELEASE_VERSION="${PRESTO_STABLE_RELEASE_VERSION}-edge$((EDGE_N+1))"
                         echo "new presto edge release version: ${PRESTO_EDGE_RELEASE_VERSION}"
                         echo ${PRESTO_EDGE_RELEASE_VERSION} > PRESTO_EDGE_RELEASE_VERSION.version
@@ -167,14 +166,13 @@ pipeline {
                                              usernameVariable: 'GIT_USERNAME')]) {
                         sh '''
                             ORIGIN="https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/prestodb/presto.git"
-                            EDGE_BRANCH="edge-${PRESTO_EDGE_RELEASE_VERSION}"
+                            EDGE_BRANCH="release-${PRESTO_EDGE_RELEASE_VERSION}"
                             git reset --hard
                             git checkout ${PRESTO_RELEASE_SHA}
                             git checkout -b ${EDGE_BRANCH}
                             unset MAVEN_CONFIG && ./mvnw --batch-mode release:update-versions -DautoVersionSubmodules=true -DdevelopmentVersion="${PRESTO_EDGE_RELEASE_VERSION}-SNAPSHOT"
                             git status | grep pom.xml | grep -v versionsBackup  | awk '{print $2}' | xargs git add
                             git status
-                            git diff pom.xml | cat
                             git config --global user.email "wanglinsong@gmail.com"
                             git config --global user.name "Linsong Wang"
                             git commit -m "create a new branch for edge release ${PRESTO_EDGE_RELEASE_VERSION}"
