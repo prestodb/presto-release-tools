@@ -168,8 +168,8 @@ pipeline {
                         sh '''
                             ORIGIN="https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/prestodb/presto.git"
                             EDGE_BRANCH="edge-${PRESTO_EDGE_RELEASE_VERSION}"
-                            git checkout ${PRESTO_RELEASE_SHA}
                             git reset --hard
+                            git checkout ${PRESTO_RELEASE_SHA}
                             git checkout -b ${EDGE_BRANCH}
                             unset MAVEN_CONFIG && ./mvnw --batch-mode release:update-versions -DautoVersionSubmodules=true -DdevelopmentVersion="${PRESTO_EDGE_RELEASE_VERSION}-SNAPSHOT"
                             git status | grep pom.xml | grep -v versionsBackup  | awk '{print $2}' | xargs git add
