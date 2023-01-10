@@ -31,6 +31,13 @@ pipeline {
                 stage('Setup') {
                     steps {
                         sh 'apt update && apt install -y awscli git jq tree'
+                        sh '''
+                            curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
+                            && chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg \
+                            && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
+                            && apt update \
+                            && apt install gh -y
+                        '''
                     }
                 }
 
@@ -115,17 +122,18 @@ pipeline {
                         dir('presto') {
                             withCredentials([usernamePassword(credentialsId: "${GITHUB_CREDENTIAL_ID}", passwordVariable: 'GIT_PASSWORD', usernameVariable: 'GIT_USERNAME')]) {
                                 sh '''
+                                    git --no-pager log --since="40 days ago" --graph --pretty=format:'%C(auto)%h%d%Creset %C(cyan)(%cd)%Creset %C(green)%cn <%ce>%Creset %s'
+
                                     mvn release:branch --batch-mode  \
                                         -DautoVersionSubmodules=true \
                                         -DbranchName=release-${PRESTO_RELEASE_VERSION} \
                                         -DgenerateBackupPoms=false
                                     git checkout -b master-version-update
-                                    git --no-pager log --since="40 days ago" --graph --pretty=format:'%C(auto)%h%d%Creset %C(cyan)(%cd)%Creset %C(green)%cn <%ce>%Creset %s'
                                     git branch
 
                                     echo "create PR..."
-                                    # echo "${GITHUB_IMPLYDATA_TOKEN}" > token && gh auth login -h github.com --with-token < token && rm token
-                                    # gh pr create --base master --fill --no-maintainer-edit --reviewer wanglinsong --head master-version-update
+                                    echo "${GITHUB_IMPLYDATA_TOKEN}" > token && gh auth login -h github.com --with-token < token && rm token
+                                    gh pr create --base master --fill --no-maintainer-edit --reviewer wanglinsong --head master-version-update
                                 '''
                             }
                         }
@@ -155,7 +163,7 @@ pipeline {
                                     mvn versions:set -DnewVersion="${PRESTO_RELEASE_VERSION}.1-SNAPSHOT"
                                     git add .
                                     git commit -m "Update release branch development version to ${PRESTO_RELEASE_VERSION}.1-SNAPSHOT"
-                                    # git push --set-upstream "${ORIGIN}" release-0.279
+                                    git push --set-upstream "${ORIGIN}" release-0.279
                                 '''
                             }
                         }
