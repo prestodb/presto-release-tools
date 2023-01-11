@@ -3,7 +3,7 @@ pipeline {
     agent none
 
     environment {
-        GITHUB_CREDENTIAL_ID = 'github-personal-token-wanglinsong'
+        GITHUB_CREDENTIAL_ID = 'github-token-wanglinsong'
         AWS_CREDENTIAL_ID    = 'aws-jenkins'
         AWS_DEFAULT_REGION   = 'us-east-1'
         AWS_ECR              = credentials('aws-ecr-private-registry')
@@ -35,8 +35,7 @@ pipeline {
                             curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
                             && chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg \
                             && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
-                            && apt update \
-                            && apt install gh -y
+                            && apt update && apt install -y gh
                         '''
                     }
                 }
@@ -62,6 +61,10 @@ pipeline {
                                     url: 'https://github.com/prestodb/presto'
                                 ]]
                         dir('presto') {
+                            sh '''
+                                git config user.email "wanglinsong@gmail.com"
+                                git config user.name "Linsong Wang"
+                            '''
                             sh 'mvn versions:set -DremoveSnapshot'
                             script {
                                 env.PRESTO_RELEASE_VERSION = sh(
@@ -122,18 +125,20 @@ pipeline {
                         dir('presto') {
                             withCredentials([usernamePassword(credentialsId: "${GITHUB_CREDENTIAL_ID}", passwordVariable: 'GIT_PASSWORD', usernameVariable: 'GIT_USERNAME')]) {
                                 sh '''
+                                    git reset --hard ${PRESTO_RELEASE_SHA} 
                                     git --no-pager log --since="40 days ago" --graph --pretty=format:'%C(auto)%h%d%Creset %C(cyan)(%cd)%Creset %C(green)%cn <%ce>%Creset %s'
 
                                     mvn release:branch --batch-mode  \
-                                        -DautoVersionSubmodules=true \
                                         -DbranchName=release-${PRESTO_RELEASE_VERSION} \
                                         -DgenerateBackupPoms=false
-                                    git checkout -b master-version-update
+                                    git checkout -b master-version-update-${PRESTO_RELEASE_VERSION}
                                     git branch
+                                    ORIGIN="https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/prestodb/presto.git"
+                                    git push --set-upstream ${ORIGIN} master-version-update-0.279
 
                                     echo "create PR..."
-                                    echo "${GITHUB_IMPLYDATA_TOKEN}" > token && gh auth login -h github.com --with-token < token && rm token
-                                    gh pr create --base master --fill --no-maintainer-edit --reviewer wanglinsong --head master-version-update
+                                    echo "${GIT_PASSWORD}" > token && gh auth login -h github.com --with-token < token && rm token
+                                    gh pr create --base master --fill --no-maintainer-edit --reviewer xpengahana --head master-version-update-${PRESTO_RELEASE_VERSION}
                                 '''
                             }
                         }
@@ -146,7 +151,7 @@ pipeline {
                             withCredentials([usernamePassword(credentialsId: "${GITHUB_CREDENTIAL_ID}", passwordVariable: 'GIT_PASSWORD', usernameVariable: 'GIT_USERNAME')]) {
                                 sh '''
                                     echo 'TBD'
-                                    #src/release/release-notes.sh $GIT_USERNAME $GIT_PASSWORD
+                                    # src/release/release-notes.sh $GIT_USERNAME $GIT_PASSWORD
                                 '''
                             }
                         }
@@ -160,10 +165,10 @@ pipeline {
                                 sh '''
                                     ORIGIN="https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/prestodb/presto.git"
                                     git checkout release-${PRESTO_RELEASE_VERSION}
-                                    mvn versions:set -DnewVersion="${PRESTO_RELEASE_VERSION}.1-SNAPSHOT"
+                                    mvn versions:set -DnewVersion="${PRESTO_RELEASE_VERSION}.1-SNAPSHOT" -DgenerateBackupPoms=false
                                     git add .
-                                    git commit -m "Update release branch development version to ${PRESTO_RELEASE_VERSION}.1-SNAPSHOT"
-                                    git push --set-upstream "${ORIGIN}" release-0.279
+                                    git commit -m "Update stable release branch development version to ${PRESTO_RELEASE_VERSION}.1-SNAPSHOT"
+                                    git push --set-upstream ${ORIGIN} release-${PRESTO_RELEASE_VERSION}
                                 '''
                             }
                         }
@@ -214,7 +219,7 @@ pipeline {
                     parallel {
                         stage('Release to Maven Central') {
                             steps {
-                                echo 'release all jars to Maven Central'
+                                echo 'release all jars and the server tarball to Maven Central'
                                 echo 'TBD'
                             }
                         }
