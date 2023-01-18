@@ -3,6 +3,8 @@ kind: Pod
 metadata:
   namespace: oss-agent
 spec:
+  nodeSelector:
+    eks.amazonaws.com/nodegroup: eks-oss-presto-dynamic-managed-ng
   serviceAccountName: oss-agent
   containers:
   - name: maven

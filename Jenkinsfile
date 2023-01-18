@@ -12,6 +12,8 @@ pipeline {
         AWS_DEFAULT_REGION = 'us-east-1'
         AWS_ECR            = credentials('aws-ecr-private-registry')
         AWS_S3_PREFIX      = 's3://oss-jenkins/artifact/presto'
+        AWS_ECR_PUBLIC     = 'public.ecr.aws/c0e3k9s8'
+        S3_URL_BASE        = 'https://oss-presto-release.s3.amazonaws.com/presto'
     }
 
     options {
@@ -70,14 +72,19 @@ pipeline {
                              url: 'https://github.com/prestodb/presto'
                          ]]
                 dir('presto') {
+                    sh '''
+                        git config user.email "wanglinsong@gmail.com"
+                        git config user.name "Linsong Wang"
+                    '''
                     sh 'unset MAVEN_CONFIG && ./mvnw versions:set -DremoveSnapshot -ntp'
                     script {
                         env.PRESTO_STABLE_RELEASE_VERSION = sh(
                             script: 'unset MAVEN_CONFIG && ./mvnw org.apache.maven.plugins:maven-help-plugin:3.2.0:evaluate -Dexpression=project.version -q -ntp -DforceStdout',
                             returnStdout: true).trim()
                     }
+                    echo "Presto stable release version ${PRESTO_STABLE_RELEASE_VERSION}"
+                    sh 'git reset --hard'
                 }
-                echo "Presto next stable release version ${PRESTO_STABLE_RELEASE_VERSION}"
             }
         }
 
@@ -89,12 +96,33 @@ pipeline {
                         credentialsId: "${AWS_CREDENTIAL_ID}",
                         accessKeyVariable: 'AWS_ACCESS_KEY_ID',
                         secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
-                    script {
-                        env.DOCKER_IMAGE_TAG = sh(
-                            script: 'scripts/get-releasable-docker-image-tag.sh',
-                            returnStdout: true).trim()
-                        env.PRESTO_BUILD_VERSION = env.DOCKER_IMAGE_TAG.substring(0, env.DOCKER_IMAGE_TAG.lastIndexOf('-'));
-                        env.PRESTO_RELEASE_SHA = env.PRESTO_BUILD_VERSION.substring(env.PRESTO_BUILD_VERSION.lastIndexOf('-') + 1);
+
+                    dir('presto') {
+                        sh '''#!/bin/bash -ex
+                            TAGS=($(aws ecr list-images --repository-name oss-presto/presto \
+                                | jq -r '.imageIds[].imageTag | select( . != null)' \
+                                | grep "${PRESTO_STABLE_RELEASE_VERSION}-20" \
+                                | sort -r))
+                            for TAG in $TAGS
+                            do
+                                echo $TAG
+                                sha=$(echo $TAG | awk -F- '{print $3}')
+                                if git merge-base --is-ancestor $sha HEAD
+                                then
+                                    echo done
+                                    echo $TAG > release-tag.txt
+                                    break
+                                fi
+                            done
+                            cat release-tag.txt
+                        '''
+                        script {
+                            env.DOCKER_IMAGE_TAG = sh(
+                                script: 'cat release-tag.txt',
+                                returnStdout: true).trim()
+                            env.PRESTO_BUILD_VERSION = env.DOCKER_IMAGE_TAG.substring(0, env.DOCKER_IMAGE_TAG.lastIndexOf('-'));
+                            env.PRESTO_RELEASE_SHA = env.PRESTO_BUILD_VERSION.substring(env.PRESTO_BUILD_VERSION.lastIndexOf('-') + 1);
+                        }
                     }
                 }
                 sh 'printenv | sort'
@@ -130,8 +158,10 @@ pipeline {
                         secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
                     sh '''
                         aws s3 ls "${AWS_S3_PREFIX}/${PRESTO_BUILD_VERSION}/"
-                        aws s3 cp ${AWS_S3_PREFIX}/${PRESTO_BUILD_VERSION}/ ${AWS_S3_PREFIX}/${PRESTO_EDGE_RELEASE_VERSION}/ --recursive --no-progress
+                        aws s3 cp "${AWS_S3_PREFIX}/${PRESTO_BUILD_VERSION}/" "s3://oss-presto-release/presto/${PRESTO_EDGE_RELEASE_VERSION}/" --recursive --no-progress
                     '''
+                    echo "${S3_URL_BASE}/${PRESTO_EDGE_RELEASE_VERSION}/presto-server-${PRESTO_STABLE_RELEASE_VERSION}.tar.gz"
+                    echo "${S3_URL_BASE}/${PRESTO_EDGE_RELEASE_VERSION}/presto-cli-${PRESTO_STABLE_RELEASE_VERSION}-executable.jar"
                 }
             }
         }
@@ -148,9 +178,10 @@ pipeline {
                         sh '''
                             aws ecr get-login-password | docker login --username AWS --password-stdin ${AWS_ECR}
                             docker pull "${AWS_ECR}/oss-presto/presto:${DOCKER_IMAGE_TAG}"
-                            docker tag "${AWS_ECR}/oss-presto/presto:${DOCKER_IMAGE_TAG}" "${AWS_ECR}/oss-presto/presto:${PRESTO_EDGE_RELEASE_VERSION}"
+                            docker tag "${AWS_ECR}/oss-presto/presto:${DOCKER_IMAGE_TAG}" "${AWS_ECR_PUBLIC}/presto:${PRESTO_EDGE_RELEASE_VERSION}"
                             docker image ls
-                            docker push ${AWS_ECR}/oss-presto/presto:${PRESTO_EDGE_RELEASE_VERSION}
+                            aws ecr-public get-login-password | docker login --username AWS --password-stdin ${AWS_ECR_PUBLIC}
+                            docker push ${AWS_ECR_PUBLIC}/presto:${PRESTO_EDGE_RELEASE_VERSION}
                         '''
                     }
                 }
@@ -173,24 +204,12 @@ pipeline {
                             unset MAVEN_CONFIG && ./mvnw --batch-mode release:update-versions -DautoVersionSubmodules=true -DdevelopmentVersion="${PRESTO_EDGE_RELEASE_VERSION}-SNAPSHOT"
                             git status | grep pom.xml | grep -v versionsBackup  | awk '{print $2}' | xargs git add
                             git status
-                            git config --global user.email "wanglinsong@gmail.com"
-                            git config --global user.name "Linsong Wang"
                             git commit -m "create a new branch for edge release ${PRESTO_EDGE_RELEASE_VERSION}"
                             git push --set-upstream ${ORIGIN} ${EDGE_BRANCH}
                         '''
                     }
                 }
             }
-        }
-    }
-
-    post {
-        success {
-            echo "release artifacts: ${AWS_S3_PREFIX}/${PRESTO_EDGE_RELEASE_VERSION}/"
-            echo "docker image: ${AWS_ECR}/oss-presto/presto:${PRESTO_EDGE_RELEASE_VERSION}"
-        }
-        cleanup {
-            cleanWs()
         }
     }
 }
