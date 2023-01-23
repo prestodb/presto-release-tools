@@ -6,6 +6,8 @@ metadata:
     containers: maven
 spec:
   serviceAccountName: oss-agent
+  nodeSelector:
+    eks.amazonaws.com/nodegroup: eks-oss-presto-dynamic-managed-ng
   containers:
   - name: maven
     image: maven:3.8.6-openjdk-8-slim

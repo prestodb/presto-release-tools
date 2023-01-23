@@ -18,6 +18,17 @@ pipeline {
         timeout(time: 1, unit: 'HOURS')
     }
 
+
+    parameters {
+        choice(name: 'PRESTO_STABLE_RELEASE_VERSION',
+               choices: ['0.279'],
+               description: 'Presto stable release version, which is used to define the release branch name: 0.279 -> release-0.279'
+        )
+        string(name: 'PRESTO_SOURCE_REPOSITORY',
+               defaultValue: 'github.com/prestodb/presto',
+               description: 'for pipeline debug only, no need to change for regular runs')
+    }
+
     stages {
         stage ('Search') {
             agent {
@@ -42,8 +53,11 @@ pipeline {
 
                 stage ('Load Presto') {
                     steps {
+                        script {
+                            env.PRESTO_STABLE_RELEASE_BRANCH = 'release-' + params.PRESTO_STABLE_RELEASE_VERSION
+                        }
                         checkout $class: 'GitSCM',
-                                branches: [[name: '*/master']],
+                                branches: [[name: "${PRESTO_STABLE_RELEASE_BRANCH}"]],
                                 doGenerateSubmoduleConfigurations: false,
                                 extensions: [[
                                     $class: 'RelativeTargetDirectory',
@@ -58,7 +72,7 @@ pipeline {
                                 submoduleCfg: [],
                                 userRemoteConfigs: [[
                                     credentialsId: "${GITHUB_CREDENTIAL_ID}",
-                                    url: 'https://github.com/prestodb/presto'
+                                    url: "https://${PRESTO_SOURCE_REPOSITORY}"
                                 ]]
                         dir('presto') {
                             sh '''
@@ -67,11 +81,13 @@ pipeline {
                             '''
                             sh 'mvn versions:set -DremoveSnapshot'
                             script {
-                                env.PRESTO_RELEASE_VERSION = sh(
+                                env.PRESTO_HOTFIX_VERSION = sh(
                                     script: 'mvn org.apache.maven.plugins:maven-help-plugin:3.2.0:evaluate -Dexpression=project.version -q -DforceStdout',
                                     returnStdout: true).trim()
+                                env.PRESTO_HOTFIX_NUMBER = env.PRESTO_HOTFIX_VERSION.substring(env.PRESTO_HOTFIX_VERSION.lastIndexOf('.') + 1)
+                                env.PRESTO_NEXT_DEV_VERSION = params.PRESTO_STABLE_RELEASE_VERSION + '.' + (Integer.parseInt(env.PRESTO_HOTFIX_NUMBER) + 1)+ '-SNAPSHOT'
                             }
-                            echo "Presto release version ${PRESTO_RELEASE_VERSION}"
+                            echo "Presto hotfix release version ${PRESTO_HOTFIX_VERSION}"
                             sh 'git reset --hard'
                         }
                     }
@@ -79,7 +95,7 @@ pipeline {
 
                 stage ('Search Artifacts') {
                     steps {
-                        echo "query for presto docker images with release version ${PRESTO_RELEASE_VERSION}"
+                        echo "query for presto docker images with release version ${PRESTO_HOTFIX_VERSION}"
                         withCredentials([[
                                 $class: 'AmazonWebServicesCredentialsBinding',
                                 credentialsId: "${AWS_CREDENTIAL_ID}",
@@ -89,14 +105,14 @@ pipeline {
                                 sh '''#!/bin/bash -ex
                                     TAGS=($(aws ecr list-images --repository-name oss-presto/presto \
                                         | jq -r '.imageIds[].imageTag | select( . != null)' \
-                                        | grep "${PRESTO_RELEASE_VERSION}-20" \
+                                        | grep "${PRESTO_HOTFIX_VERSION}-20" \
                                         | sort -r))
 
                                     for TAG in $TAGS
                                     do
                                         echo $TAG
                                         sha=$(echo $TAG | awk -F- '{print $3}')
-                                        if git log | grep $sha
+                                        if git merge-base --is-ancestor $sha HEAD
                                         then
                                             echo done
                                             echo $TAG > release-tag.txt
@@ -115,7 +131,7 @@ pipeline {
                             }
                         }
                         sh 'printenv | sort'
-                        echo "${AWS_S3_PREFIX}/${PRESTO_BUILD_VERSION}/presto-server-${PRESTO_RELEASE_VERSION}.tar.gz"
+                        echo "${AWS_S3_PREFIX}/${PRESTO_BUILD_VERSION}/presto-server-${PRESTO_HOTFIX_VERSION}.tar.gz"
                         echo "${AWS_ECR}/oss-presto/presto:${DOCKER_IMAGE_TAG}"
                     }
                 }
@@ -125,20 +141,14 @@ pipeline {
                         dir('presto') {
                             withCredentials([usernamePassword(credentialsId: "${GITHUB_CREDENTIAL_ID}", passwordVariable: 'GIT_PASSWORD', usernameVariable: 'GIT_USERNAME')]) {
                                 sh '''
-                                    git reset --hard ${PRESTO_RELEASE_SHA} 
+                                    git reset --hard ${PRESTO_RELEASE_SHA}
                                     git --no-pager log --since="40 days ago" --graph --pretty=format:'%C(auto)%h%d%Creset %C(cyan)(%cd)%Creset %C(green)%cn <%ce>%Creset %s'
-
-                                    mvn release:branch --batch-mode  \
-                                        -DbranchName=release-${PRESTO_RELEASE_VERSION} \
-                                        -DgenerateBackupPoms=false
-                                    git checkout -b master-version-update-${PRESTO_RELEASE_VERSION}
-                                    git branch
-                                    ORIGIN="https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/prestodb/presto.git"
-                                    git push --set-upstream ${ORIGIN} master-version-update-0.279
-
-                                    echo "create PR..."
-                                    echo "${GIT_PASSWORD}" > token && gh auth login -h github.com --with-token < token && rm token
-                                    gh pr create --base master --fill --no-maintainer-edit --reviewer xpengahana --head master-version-update-${PRESTO_RELEASE_VERSION}
+                                    mvn versions:set -DnewVersion="${PRESTO_NEXT_DEV_VERSION}" -DgenerateBackupPoms=false
+                                    cat pom.xml
+                                    git add .
+                                    ORIGIN="https://${GIT_USERNAME}:${GIT_PASSWORD}@${PRESTO_SOURCE_REPOSITORY}"
+                                    git commit -m "Update stable release branch development version to ${PRESTO_NEXT_DEV_VERSION}"
+                                    #git push --set-upstream ${ORIGIN} ${PRESTO_STABLE_RELEASE_BRANCH}
                                 '''
                             }
                         }
@@ -151,7 +161,6 @@ pipeline {
                             withCredentials([usernamePassword(credentialsId: "${GITHUB_CREDENTIAL_ID}", passwordVariable: 'GIT_PASSWORD', usernameVariable: 'GIT_USERNAME')]) {
                                 sh '''
                                     echo 'TBD'
-                                    # src/release/release-notes.sh $GIT_USERNAME $GIT_PASSWORD
                                 '''
                             }
                         }
@@ -164,11 +173,11 @@ pipeline {
                             withCredentials([usernamePassword(credentialsId: "${GITHUB_CREDENTIAL_ID}", passwordVariable: 'GIT_PASSWORD', usernameVariable: 'GIT_USERNAME')]) {
                                 sh '''
                                     ORIGIN="https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/prestodb/presto.git"
-                                    git checkout release-${PRESTO_RELEASE_VERSION}
-                                    mvn versions:set -DnewVersion="${PRESTO_RELEASE_VERSION}.1-SNAPSHOT" -DgenerateBackupPoms=false
+                                    git checkout release-${PRESTO_HOTFIX_VERSION}
+                                    mvn versions:set -DnewVersion="${PRESTO_HOTFIX_VERSION}.1-SNAPSHOT" -DgenerateBackupPoms=false
                                     git add .
-                                    git commit -m "Update stable release branch development version to ${PRESTO_RELEASE_VERSION}.1-SNAPSHOT"
-                                    git push --set-upstream ${ORIGIN} release-${PRESTO_RELEASE_VERSION}
+                                    git commit -m "Update stable release branch development version to ${PRESTO_HOTFIX_VERSION}.1-SNAPSHOT"
+                                    git push --set-upstream ${ORIGIN} release-${PRESTO_HOTFIX_VERSION}
                                 '''
                             }
                         }
@@ -233,10 +242,10 @@ pipeline {
                                         secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
                                     script {
                                         sh '''
-                                            aws s3 cp "${AWS_S3_PREFIX}/${PRESTO_BUILD_VERSION}/" "s3://oss-presto-release/presto/${PRESTO_RELEASE_VERSION}/" --recursive --no-progress
+                                            aws s3 cp "${AWS_S3_PREFIX}/${PRESTO_BUILD_VERSION}/" "s3://oss-presto-release/presto/${PRESTO_HOTFIX_VERSION}/" --recursive --no-progress
                                         '''
-                                        echo "${S3_URL_BASE}/${PRESTO_RELEASE_VERSION}/presto-server-${PRESTO_RELEASE_VERSION}.tar.gz"
-                                        echo "${S3_URL_BASE}/${PRESTO_RELEASE_VERSION}/presto-cli-${PRESTO_RELEASE_VERSION}-executable.jar"
+                                        echo "${S3_URL_BASE}/${PRESTO_HOTFIX_VERSION}/presto-server-${PRESTO_HOTFIX_VERSION}.tar.gz"
+                                        echo "${S3_URL_BASE}/${PRESTO_HOTFIX_VERSION}/presto-cli-${PRESTO_HOTFIX_VERSION}-executable.jar"
                                     }
                                 }
                             }
@@ -253,14 +262,14 @@ pipeline {
                                         sh '''
                                             aws ecr get-login-password | docker login --username AWS --password-stdin ${AWS_ECR}
                                             docker pull "${AWS_ECR}/oss-presto/presto:${DOCKER_IMAGE_TAG}"
-                                            docker tag "${AWS_ECR}/oss-presto/presto:${DOCKER_IMAGE_TAG}" "${AWS_ECR_PUBLIC}/presto:${PRESTO_RELEASE_VERSION}"
+                                            docker tag "${AWS_ECR}/oss-presto/presto:${DOCKER_IMAGE_TAG}" "${AWS_ECR_PUBLIC}/presto:${PRESTO_HOTFIX_VERSION}"
                                             # docker pull "${AWS_ECR}/oss-presto/presto-native:${DOCKER_IMAGE_TAG}"
-                                            # docker tag "${AWS_ECR}/oss-presto/presto-native:${DOCKER_IMAGE_TAG}" "${AWS_ECR_PUBLIC}/presto-native:${PRESTO_RELEASE_VERSION}"
+                                            # docker tag "${AWS_ECR}/oss-presto/presto-native:${DOCKER_IMAGE_TAG}" "${AWS_ECR_PUBLIC}/presto-native:${PRESTO_HOTFIX_VERSION}"
                                             docker image ls
 
                                             aws ecr-public get-login-password | docker login --username AWS --password-stdin ${AWS_ECR_PUBLIC}
-                                            docker push "${AWS_ECR_PUBLIC}/presto:${PRESTO_RELEASE_VERSION}"
-                                            # docker push "${AWS_ECR_PUBLIC}/presto-native:${PRESTO_RELEASE_VERSION}"
+                                            docker push "${AWS_ECR_PUBLIC}/presto:${PRESTO_HOTFIX_VERSION}"
+                                            # docker push "${AWS_ECR_PUBLIC}/presto-native:${PRESTO_HOTFIX_VERSION}"
                                         '''
                                     }
                                 }
