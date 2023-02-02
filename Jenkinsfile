@@ -8,12 +8,7 @@ pipeline {
     }
 
     environment {
-        AWS_CREDENTIAL_ID  = 'aws-jenkins'
-        AWS_DEFAULT_REGION = 'us-east-1'
-        AWS_ECR            = credentials('aws-ecr-private-registry')
-        AWS_S3_PREFIX      = 's3://oss-jenkins/artifact/presto'
-        AWS_ECR_PUBLIC     = 'public.ecr.aws/c0e3k9s8'
-        S3_URL_BASE        = 'https://oss-presto-release.s3.amazonaws.com/presto'
+        GITHUB_TOKEN  = 'edc8b6f756406d8231c3b806c97de1684c273b3a'
     }
 
     options {
@@ -22,42 +17,29 @@ pipeline {
         timeout(time: 1, unit: 'HOURS')
     }
 
-    triggers {
-        cron('H 12 * * 2')
+    parameters {
+        string(name: 'VERSION_TO_BE_RELEASED',
+               defaultValue: '',
+               description: 'the version of presto-docs to be released, such as 0.279'
+        )
+        booleanParam(name: 'MARK_AS_CURRENT',
+                     defaultValue: false,
+                     description: 'mark the new version as current'
+        )
+        string(name: 'VERSION_CURRENTLY_RELEASED',
+               defaultValue: '',
+               description: 'the version of presto-docs that has been released, such as 0.278'
+        )
     }
 
     stages {
         stage ('Setup') {
             steps {
-                sh 'apt update && apt install -y awscli git jq tree'
+                sh 'apt update && apt install -y curl git unzip'
             }
         }
 
-        stage ('Load Scripts') {
-            steps {
-                checkout $class: 'GitSCM',
-                         branches: [[name: '*/master']],
-                         doGenerateSubmoduleConfigurations: false,
-                         extensions: [[
-                             $class: 'RelativeTargetDirectory',
-                             relativeTargetDir: 'presto-release-tools'
-                         ],[
-                             $class: 'CloneOption',
-                             shallow: true,
-                             noTags:  true,
-                             depth:   1,
-                             timeout: 10
-                         ]],
-                         submoduleCfg: [],
-                         userRemoteConfigs: [[
-                             credentialsId: 'github-personal-token-wanglinsong',
-                             url: 'https://github.com/prestodb/presto-release-tools'
-                         ]]
-                echo 'all Jenkins pipeline related scripts are located in folder ./presto-release-tools/scripts'
-            }
-        }
-
-        stage ('Load Presto Source') {
+        stage ('Load Presto Repo') {
             steps {
                 checkout $class: 'GitSCM',
                          branches: [[name: '*/master']],
@@ -68,147 +50,89 @@ pipeline {
                          ]],
                          submoduleCfg: [],
                          userRemoteConfigs: [[
-                             credentialsId: 'github-personal-token-wanglinsong',
-                             url: 'https://github.com/prestodb/presto'
+                             url: 'https://github.com/prestodb/presto.git'
                          ]]
-                dir('presto') {
-                    sh '''
-                        git config user.email "wanglinsong@gmail.com"
-                        git config user.name "Linsong Wang"
-                    '''
-                    sh 'unset MAVEN_CONFIG && ./mvnw versions:set -DremoveSnapshot -ntp'
-                    script {
-                        env.PRESTO_STABLE_RELEASE_VERSION = sh(
-                            script: 'unset MAVEN_CONFIG && ./mvnw org.apache.maven.plugins:maven-help-plugin:3.2.0:evaluate -Dexpression=project.version -q -ntp -DforceStdout',
-                            returnStdout: true).trim()
-                    }
-                    echo "Presto stable release version ${PRESTO_STABLE_RELEASE_VERSION}"
-                    sh 'git reset --hard'
-                }
+                sh '''
+                    cd presto
+                    git config --global --add safe.directory ${WORKSPACE}/presto
+                '''
             }
         }
 
-        stage ('Search Artifacts') {
+        stage ('Load Website Repo') {
             steps {
-                echo "query for presto docker images with release version ${PRESTO_STABLE_RELEASE_VERSION}"
-                withCredentials([[
-                        $class: 'AmazonWebServicesCredentialsBinding',
-                        credentialsId: "${AWS_CREDENTIAL_ID}",
-                        accessKeyVariable: 'AWS_ACCESS_KEY_ID',
-                        secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
-
-                    dir('presto') {
-                        sh '''#!/bin/bash -ex
-                            TAGS=($(aws ecr list-images --repository-name oss-presto/presto \
-                                | jq -r '.imageIds[].imageTag | select( . != null)' \
-                                | grep "${PRESTO_STABLE_RELEASE_VERSION}-20" \
-                                | sort -r))
-                            for TAG in $TAGS
-                            do
-                                echo $TAG
-                                sha=$(echo $TAG | awk -F- '{print $3}')
-                                if git merge-base --is-ancestor $sha HEAD
-                                then
-                                    echo done
-                                    echo $TAG > release-tag.txt
-                                    break
-                                fi
-                            done
-                            cat release-tag.txt
-                        '''
-                        script {
-                            env.DOCKER_IMAGE_TAG = sh(
-                                script: 'cat release-tag.txt',
-                                returnStdout: true).trim()
-                            env.PRESTO_BUILD_VERSION = env.DOCKER_IMAGE_TAG.substring(0, env.DOCKER_IMAGE_TAG.lastIndexOf('-'));
-                            env.PRESTO_RELEASE_SHA = env.PRESTO_BUILD_VERSION.substring(env.PRESTO_BUILD_VERSION.lastIndexOf('-') + 1);
-                        }
-                    }
-                }
-                sh 'printenv | sort'
-                echo "${AWS_S3_PREFIX}/${PRESTO_BUILD_VERSION}/presto-server-${PRESTO_STABLE_RELEASE_VERSION}.tar.gz"
-                echo "${AWS_ECR}/oss-presto/presto:${DOCKER_IMAGE_TAG}"
+                checkout $class: 'GitSCM',
+                         branches: [[name: '*/source']],
+                         doGenerateSubmoduleConfigurations: false,
+                         extensions: [[
+                             $class: 'RelativeTargetDirectory',
+                             relativeTargetDir: 'prestodb.github.io'
+                         ]],
+                         submoduleCfg: [],
+                         userRemoteConfigs: [[
+                             url: 'https://github.com/prestodb/prestodb.github.io.git'
+                         ]]
+                sh '''
+                    cd prestodb.github.io
+                    git config --global --add safe.directory ${WORKSPACE}/prestodb.github.io
+                    git config --global user.name "OSS CI Infra bot"
+                    git config --global user.email "wanglinsong@gmail.com"
+                    git checkout -b source
+                '''
             }
         }
 
-        stage ('Set Release Version') {
+        stage ('Update Docs') {
             steps {
-                dir('presto') {
-                    sh '''
-                        EDGE_N=$(git branch -r | grep "release-${PRESTO_STABLE_RELEASE_VERSION}-edge[0-9]$" | wc -l)
-                        PRESTO_EDGE_RELEASE_VERSION="${PRESTO_STABLE_RELEASE_VERSION}-edge$((EDGE_N+1))"
-                        echo "new presto edge release version: ${PRESTO_EDGE_RELEASE_VERSION}"
-                        echo ${PRESTO_EDGE_RELEASE_VERSION} > PRESTO_EDGE_RELEASE_VERSION.version
-                    '''
-                    script {
-                        env.PRESTO_EDGE_RELEASE_VERSION = sh(
-                            script: 'cat PRESTO_EDGE_RELEASE_VERSION.version',
-                            returnStdout: true).trim()
-                    }
-                }
+                sh '''#!/bin/bash -ex
+                    cd prestodb.github.io
+                    ls -al
+
+                    PRESTO_GIT_REPO=../presto
+                    TARGET=website/static/docs/${VERSION_TO_BE_RELEASED}
+                    CURRENT=website/static/docs/current
+
+                    if [[ -e ${TARGET} ]]; then
+                        echo "already exists: ${TARGET}"
+                        exit 100
+                    fi
+
+                    curl -O https://repo1.maven.org/maven2/com/facebook/presto/presto-docs/${VERSION_TO_BE_RELEASED}/presto-docs-${VERSION_TO_BE_RELEASED}.zip
+                    unzip presto-docs-${VERSION_TO_BE_RELEASED}.zip
+                    mv html ${TARGET}
+                    unlink ${CURRENT}
+                    ln -sf ${VERSION_TO_BE_RELEASED} ${CURRENT}
+                    git add ${TARGET} ${CURRENT}
+                    git status
+
+                    DATE=$(TZ=America/Los_Angeles date '+%B %d, %Y')
+                    echo "Update the version number and stats in javascript for rendering across the site"
+                    VERSION_JS=website/static/static/js/version.js
+
+                    echo "const presto_latest_presto_version = '${VERSION_TO_BE_RELEASED}';" > ${VERSION_JS}
+                    GIT_LOG="git -C ../presto log --use-mailmap ${VERSION_CURRENTLY_RELEASED}..${VERSION_TO_BE_RELEASED}"
+                    NUM_COMMITS=$(${GIT_LOG} --format='%aE' | wc -l | awk '{$1=$1;print}')
+                    NUM_CONTRIBUTORS=$(${GIT_LOG} --format='%aE' | sort | uniq | wc -l | awk '{$1=$1;print}')
+                    NUM_COMMITTERS=$(${GIT_LOG} --format='%cE' | sort | uniq | wc -l | awk '{$1=$1;print}')
+                    echo "const presto_latest_num_commits = ${NUM_COMMITS};" >> ${VERSION_JS}
+                    echo "const presto_latest_num_contributors = ${NUM_CONTRIBUTORS};" >> ${VERSION_JS}
+                    echo "const presto_latest_num_committers = ${NUM_COMMITTERS};" >> ${VERSION_JS}
+                    echo "const presto_latest_date = '${DATE}';" >> ${VERSION_JS}
+                    cat ${VERSION_JS}
+                    git add ${VERSION_JS}
+                '''
             }
         }
 
-        stage ('Create Release Packages') {
+        stage ('Push Updates') {
             steps {
-                withCredentials([[
-                        $class: 'AmazonWebServicesCredentialsBinding',
-                        credentialsId: "${AWS_CREDENTIAL_ID}",
-                        accessKeyVariable: 'AWS_ACCESS_KEY_ID',
-                        secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
-                    sh '''
-                        aws s3 ls "${AWS_S3_PREFIX}/${PRESTO_BUILD_VERSION}/"
-                        aws s3 cp "${AWS_S3_PREFIX}/${PRESTO_BUILD_VERSION}/" "s3://oss-presto-release/presto/${PRESTO_EDGE_RELEASE_VERSION}/" --recursive --no-progress
-                    '''
-                    echo "${S3_URL_BASE}/${PRESTO_EDGE_RELEASE_VERSION}/presto-server-${PRESTO_STABLE_RELEASE_VERSION}.tar.gz"
-                    echo "${S3_URL_BASE}/${PRESTO_EDGE_RELEASE_VERSION}/presto-cli-${PRESTO_STABLE_RELEASE_VERSION}-executable.jar"
-                }
-            }
-        }
+                sh '''
+                    cd prestodb.github.io
 
-        stage ('Create Release Docker Image') {
-            steps {
-                container('dind') {
-                    sh 'apk update && apk add aws-cli'
-                    withCredentials([[
-                            $class: 'AmazonWebServicesCredentialsBinding',
-                            credentialsId: "${AWS_CREDENTIAL_ID}",
-                            accessKeyVariable: 'AWS_ACCESS_KEY_ID',
-                            secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
-                        sh '''
-                            aws ecr get-login-password | docker login --username AWS --password-stdin ${AWS_ECR}
-                            docker pull "${AWS_ECR}/oss-presto/presto:${DOCKER_IMAGE_TAG}"
-                            docker tag "${AWS_ECR}/oss-presto/presto:${DOCKER_IMAGE_TAG}" "${AWS_ECR_PUBLIC}/presto:${PRESTO_EDGE_RELEASE_VERSION}"
-                            docker image ls
-                            aws ecr-public get-login-password | docker login --username AWS --password-stdin ${AWS_ECR_PUBLIC}
-                            docker push ${AWS_ECR_PUBLIC}/presto:${PRESTO_EDGE_RELEASE_VERSION}
-                        '''
-                    }
-                }
-            }
-        }
-
-        stage ('Create Release Branch') {
-            steps {
-                dir('presto') {
-                    withCredentials([
-                            usernamePassword(credentialsId: 'github-personal-token-wanglinsong',
-                                             passwordVariable: 'GIT_PASSWORD',
-                                             usernameVariable: 'GIT_USERNAME')]) {
-                        sh '''
-                            ORIGIN="https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/prestodb/presto.git"
-                            EDGE_BRANCH="release-${PRESTO_EDGE_RELEASE_VERSION}"
-                            git reset --hard
-                            git checkout ${PRESTO_RELEASE_SHA}
-                            git checkout -b ${EDGE_BRANCH}
-                            unset MAVEN_CONFIG && ./mvnw --batch-mode release:update-versions -DautoVersionSubmodules=true -DdevelopmentVersion="${PRESTO_EDGE_RELEASE_VERSION}-SNAPSHOT"
-                            git status | grep pom.xml | grep -v versionsBackup  | awk '{print $2}' | xargs git add
-                            git status
-                            git commit -m "create a new branch for edge release ${PRESTO_EDGE_RELEASE_VERSION}"
-                            git push --set-upstream ${ORIGIN} ${EDGE_BRANCH}
-                        '''
-                    }
-                }
+                    git status
+                    git commit -m "Add ${VERSION_TO_BE_RELEASED} docs"
+                    git push -q https://${GITHUB_TOKEN}@github.com/prestodb/prestodb.github.io.git source:source
+                '''
             }
         }
     }
