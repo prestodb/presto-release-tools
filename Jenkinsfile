@@ -8,6 +8,7 @@ pipeline {
     }
 
     environment {
+        GITHUB_TOKEN_ID    = 'github-token-presto-release-bot'
         AWS_CREDENTIAL_ID  = 'aws-jenkins'
         AWS_DEFAULT_REGION = 'us-east-1'
         AWS_ECR            = credentials('aws-ecr-private-registry')
@@ -50,7 +51,7 @@ pipeline {
                          ]],
                          submoduleCfg: [],
                          userRemoteConfigs: [[
-                             credentialsId: 'github-personal-token-wanglinsong',
+                             credentialsId: "${GITHUB_TOKEN_ID}",
                              url: 'https://github.com/prestodb/presto-release-tools'
                          ]]
                 echo 'all Jenkins pipeline related scripts are located in folder ./presto-release-tools/scripts'
@@ -68,23 +69,26 @@ pipeline {
                          ]],
                          submoduleCfg: [],
                          userRemoteConfigs: [[
-                             credentialsId: 'github-personal-token-wanglinsong',
-                             url: 'https://github.com/prestodb/presto'
+                             credentialsId: "${GITHUB_TOKEN_ID}",
+                             url: 'https://github.com/prestodb/presto.git'
                          ]]
-                dir('presto') {
-                    sh '''
-                        git config user.email "wanglinsong@gmail.com"
-                        git config user.name "Linsong Wang"
-                    '''
-                    sh 'unset MAVEN_CONFIG && ./mvnw versions:set -DremoveSnapshot -ntp'
-                    script {
-                        env.PRESTO_STABLE_RELEASE_VERSION = sh(
-                            script: 'unset MAVEN_CONFIG && ./mvnw org.apache.maven.plugins:maven-help-plugin:3.2.0:evaluate -Dexpression=project.version -q -ntp -DforceStdout',
-                            returnStdout: true).trim()
-                    }
-                    echo "Presto stable release version ${PRESTO_STABLE_RELEASE_VERSION}"
-                    sh 'git reset --hard'
+                sh '''
+                    cd presto
+                    git config --global --add safe.directory ${PWD}
+                    git config --global user.email "presto-release-bot@prestodb.io"
+                    git config --global user.name "presto-release-bot"
+                    unset MAVEN_CONFIG && ./mvnw versions:set -DremoveSnapshot -ntp
+                '''
+                script {
+                    env.PRESTO_STABLE_RELEASE_VERSION = sh(
+                        script: 'unset MAVEN_CONFIG && cd presto && ./mvnw org.apache.maven.plugins:maven-help-plugin:3.2.0:evaluate -Dexpression=project.version -q -ntp -DforceStdout',
+                        returnStdout: true).trim()
                 }
+                echo "Presto stable release version ${PRESTO_STABLE_RELEASE_VERSION}"
+                sh '''
+                    cd presto
+                    git reset --hard
+                '''
             }
         }
 
@@ -96,33 +100,31 @@ pipeline {
                         credentialsId: "${AWS_CREDENTIAL_ID}",
                         accessKeyVariable: 'AWS_ACCESS_KEY_ID',
                         secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
-
-                    dir('presto') {
-                        sh '''#!/bin/bash -ex
-                            TAGS=($(aws ecr list-images --repository-name oss-presto/presto \
-                                | jq -r '.imageIds[].imageTag | select( . != null)' \
-                                | grep "${PRESTO_STABLE_RELEASE_VERSION}-20" \
-                                | sort -r))
-                            for TAG in $TAGS
-                            do
-                                echo $TAG
-                                sha=$(echo $TAG | awk -F- '{print $3}')
-                                if git merge-base --is-ancestor $sha HEAD
-                                then
-                                    echo done
-                                    echo $TAG > release-tag.txt
-                                    break
-                                fi
-                            done
-                            cat release-tag.txt
-                        '''
-                        script {
-                            env.DOCKER_IMAGE_TAG = sh(
-                                script: 'cat release-tag.txt',
-                                returnStdout: true).trim()
-                            env.PRESTO_BUILD_VERSION = env.DOCKER_IMAGE_TAG.substring(0, env.DOCKER_IMAGE_TAG.lastIndexOf('-'));
-                            env.PRESTO_RELEASE_SHA = env.PRESTO_BUILD_VERSION.substring(env.PRESTO_BUILD_VERSION.lastIndexOf('-') + 1);
-                        }
+                    sh '''#!/bin/bash -ex
+                        cd presto
+                        TAGS=($(aws ecr list-images --repository-name oss-presto/presto \
+                            | jq -r '.imageIds[].imageTag | select( . != null)' \
+                            | grep "${PRESTO_STABLE_RELEASE_VERSION}-20" \
+                            | sort -r))
+                        for TAG in $TAGS
+                        do
+                            echo $TAG
+                            sha=$(echo $TAG | awk -F- '{print $3}')
+                            if git merge-base --is-ancestor $sha HEAD
+                            then
+                                echo done
+                                echo $TAG > release-tag.txt
+                                break
+                            fi
+                        done
+                        cat release-tag.txt
+                    '''
+                    script {
+                        env.DOCKER_IMAGE_TAG = sh(
+                            script: 'cat presto/release-tag.txt',
+                            returnStdout: true).trim()
+                        env.PRESTO_BUILD_VERSION = env.DOCKER_IMAGE_TAG.substring(0, env.DOCKER_IMAGE_TAG.lastIndexOf('-'));
+                        env.PRESTO_RELEASE_SHA = env.PRESTO_BUILD_VERSION.substring(env.PRESTO_BUILD_VERSION.lastIndexOf('-') + 1);
                     }
                 }
                 sh 'printenv | sort'
@@ -133,18 +135,17 @@ pipeline {
 
         stage ('Set Release Version') {
             steps {
-                dir('presto') {
-                    sh '''
-                        EDGE_N=$(git branch -r | grep "release-${PRESTO_STABLE_RELEASE_VERSION}-edge[0-9]$" | wc -l)
-                        PRESTO_EDGE_RELEASE_VERSION="${PRESTO_STABLE_RELEASE_VERSION}-edge$((EDGE_N+1))"
-                        echo "new presto edge release version: ${PRESTO_EDGE_RELEASE_VERSION}"
-                        echo ${PRESTO_EDGE_RELEASE_VERSION} > PRESTO_EDGE_RELEASE_VERSION.version
-                    '''
-                    script {
-                        env.PRESTO_EDGE_RELEASE_VERSION = sh(
-                            script: 'cat PRESTO_EDGE_RELEASE_VERSION.version',
-                            returnStdout: true).trim()
-                    }
+                sh '''
+                    cd presto
+                    EDGE_N=$(git branch -r | grep "release-${PRESTO_STABLE_RELEASE_VERSION}-edge[0-9]$" | wc -l)
+                    PRESTO_EDGE_RELEASE_VERSION="${PRESTO_STABLE_RELEASE_VERSION}-edge$((EDGE_N+1))"
+                    echo "new presto edge release version: ${PRESTO_EDGE_RELEASE_VERSION}"
+                    echo ${PRESTO_EDGE_RELEASE_VERSION} > PRESTO_EDGE_RELEASE_VERSION.version
+                '''
+                script {
+                    env.PRESTO_EDGE_RELEASE_VERSION = sh(
+                        script: 'cat presto/PRESTO_EDGE_RELEASE_VERSION.version',
+                        returnStdout: true).trim()
                 }
             }
         }
@@ -190,24 +191,24 @@ pipeline {
 
         stage ('Create Release Branch') {
             steps {
-                dir('presto') {
-                    withCredentials([
-                            usernamePassword(credentialsId: 'github-personal-token-wanglinsong',
-                                             passwordVariable: 'GIT_PASSWORD',
-                                             usernameVariable: 'GIT_USERNAME')]) {
-                        sh '''
-                            ORIGIN="https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/prestodb/presto.git"
-                            EDGE_BRANCH="release-${PRESTO_EDGE_RELEASE_VERSION}"
-                            git reset --hard
-                            git checkout ${PRESTO_RELEASE_SHA}
-                            git checkout -b ${EDGE_BRANCH}
-                            unset MAVEN_CONFIG && ./mvnw --batch-mode release:update-versions -DautoVersionSubmodules=true -DdevelopmentVersion="${PRESTO_EDGE_RELEASE_VERSION}-SNAPSHOT"
-                            git status | grep pom.xml | grep -v versionsBackup  | awk '{print $2}' | xargs git add
-                            git status
-                            git commit -m "create a new branch for edge release ${PRESTO_EDGE_RELEASE_VERSION}"
-                            git push --set-upstream ${ORIGIN} ${EDGE_BRANCH}
-                        '''
-                    }
+                withCredentials([
+                        usernamePassword(
+                            credentialsId: "${GITHUB_TOKEN_ID}",
+                            passwordVariable: 'GIT_PASSWORD',
+                            usernameVariable: 'GIT_USERNAME')]) {
+                    sh '''
+                        cd presto
+                        ORIGIN="https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/prestodb/presto.git"
+                        EDGE_BRANCH="release-${PRESTO_EDGE_RELEASE_VERSION}"
+                        git reset --hard
+                        git checkout ${PRESTO_RELEASE_SHA}
+                        git checkout -b ${EDGE_BRANCH}
+                        unset MAVEN_CONFIG && ./mvnw --batch-mode release:update-versions -DautoVersionSubmodules=true -DdevelopmentVersion="${PRESTO_EDGE_RELEASE_VERSION}-SNAPSHOT"
+                        git status | grep pom.xml | grep -v versionsBackup  | awk '{print $2}' | xargs git add
+                        git status
+                        git commit -m "create a new branch for edge release ${PRESTO_EDGE_RELEASE_VERSION}"
+                        git push --set-upstream ${ORIGIN} ${EDGE_BRANCH}
+                    '''
                 }
             }
         }
