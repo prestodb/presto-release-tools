@@ -203,10 +203,16 @@ pipeline {
                         git reset --hard
                         git checkout ${PRESTO_RELEASE_SHA}
                         git checkout -b ${EDGE_BRANCH}
-                        unset MAVEN_CONFIG && ./mvnw --batch-mode release:update-versions -DautoVersionSubmodules=true -DdevelopmentVersion="${PRESTO_EDGE_RELEASE_VERSION}-SNAPSHOT"
+                        unset MAVEN_CONFIG && ./mvnw --batch-mode release:update-versions -DautoVersionSubmodules=true \
+                            -DdevelopmentVersion="${PRESTO_EDGE_RELEASE_VERSION}-SNAPSHOT"
+                        git config -l
                         git status | grep pom.xml | grep -v versionsBackup  | awk '{print $2}' | xargs git add
                         git status
-                        git commit -m "create a new branch for edge release ${PRESTO_EDGE_RELEASE_VERSION}"
+                        git commit \
+                            -m "Prepare for next development iteration - ${PRESTO_EDGE_RELEASE_VERSION}-SNAPSHOT" \
+                            --author="oss-release-bot <oss-release-bot@prestodb.io>"
+                        git log -n 3
+                        git branch
                         git push --set-upstream ${ORIGIN} ${EDGE_BRANCH}
                     '''
                 }
