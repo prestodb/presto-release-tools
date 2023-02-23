@@ -50,6 +50,7 @@ pipeline {
                     git config --global user.email "oss-release-bot@prestodb.io"
                     git config --global user.name "oss-release-bot"
                     git branch
+                    git switch -c master
                     mvn versions:set -DremoveSnapshot -ntp
                 '''
                 script {
@@ -120,7 +121,6 @@ pipeline {
                         mvn release:branch --batch-mode  \
                             -DbranchName=release-${PRESTO_RELEASE_VERSION} \
                             -DgenerateBackupPoms=false
-                        git checkout -b master-version-update-${PRESTO_RELEASE_VERSION}
                         git branch
                         ORIGIN="https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/prestodb/presto.git"
                         git push --set-upstream --dry-run ${ORIGIN} master
