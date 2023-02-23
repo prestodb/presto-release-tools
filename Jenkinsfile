@@ -163,8 +163,9 @@ pipeline {
             steps {
                 echo 'release all jars and the server tarball to Maven Central'
                 sh '''
-                    gpg --batch --import ${GPG_SECRET}}
-                    gpg --import-ownertrust ${GPG_TRUST}
+                    gpg --batch --import ${GPG_SECRET}
+                    echo ${GPG_TRUST} | gpg --import-ownertrust -
+                    gpg --list-secret-keys
 
                     cd presto
                     export GPG_TTY=$(tty)
