@@ -8,13 +8,13 @@ pipeline {
     }
 
     environment {
-        GITHUB_TOKEN_ID      = 'github-token-presto-release-bot'
-        AWS_CREDENTIAL_ID    = 'aws-jenkins'
-        AWS_DEFAULT_REGION   = 'us-east-1'
-        AWS_ECR              = credentials('aws-ecr-private-registry')
-        AWS_ECR_PUBLIC       = 'public.ecr.aws/c0e3k9s8'
-        AWS_S3_PREFIX        = 's3://oss-jenkins/artifact/presto'
-        S3_URL_BASE          = 'https://oss-presto-release.s3.amazonaws.com/presto'
+        GITHUB_OSS_TOKEN_ID = 'github-token-presto-release-bot'
+        AWS_CREDENTIAL_ID   = 'aws-jenkins'
+        AWS_DEFAULT_REGION  = 'us-east-1'
+        AWS_ECR             = credentials('aws-ecr-private-registry')
+        AWS_ECR_PUBLIC      = 'public.ecr.aws/c0e3k9s8'
+        AWS_S3_PREFIX       = 's3://oss-jenkins/artifact/presto'
+        S3_URL_BASE         = 'https://oss-presto-release.s3.amazonaws.com/presto'
     }
 
     options {
@@ -26,7 +26,7 @@ pipeline {
     stages {
         stage('Setup') {
             steps {
-                sh 'apt update && apt install -y awscli git jq tree'
+                sh 'apt update && apt install -y awscli git gpg jq tree'
             }
         }
 
@@ -41,7 +41,7 @@ pipeline {
                         ]],
                         submoduleCfg: [],
                         userRemoteConfigs: [[
-                            credentialsId: "${GITHUB_TOKEN_ID}",
+                            credentialsId: "${GITHUB_OSS_TOKEN_ID}",
                             url: 'https://github.com/prestodb/presto.git'
                         ]]
                 sh '''
@@ -110,7 +110,7 @@ pipeline {
         stage ('Update Version in Master') {
             steps {
                 withCredentials([usernamePassword(
-                        credentialsId: "${GITHUB_TOKEN_ID}",
+                        credentialsId: "${GITHUB_OSS_TOKEN_ID}",
                         passwordVariable: 'GIT_PASSWORD',
                         usernameVariable: 'GIT_USERNAME')]) {
                     sh '''
@@ -122,6 +122,7 @@ pipeline {
                             -DbranchName=release-${PRESTO_RELEASE_VERSION} \
                             -DgenerateBackupPoms=false
                         git branch
+                        cat pom.xml
                         ORIGIN="https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/prestodb/presto.git"
                         git push --set-upstream --dry-run ${ORIGIN} master
                     '''
@@ -132,7 +133,7 @@ pipeline {
         stage ('Push Release Branch/Tag') {
             steps {
                 withCredentials([usernamePassword(
-                        credentialsId: "${GITHUB_TOKEN_ID}",
+                        credentialsId: "${GITHUB_OSS_TOKEN_ID}",
                         passwordVariable: 'GIT_PASSWORD',
                         usernameVariable: 'GIT_USERNAME')]) {
                     sh '''
@@ -145,21 +146,6 @@ pipeline {
                         git add .
                         git commit -m "Update stable release branch development version to ${PRESTO_RELEASE_VERSION}.1-SNAPSHOT"
                         git push --set-upstream --dry-run ${ORIGIN} release-${PRESTO_RELEASE_VERSION}
-                    '''
-                }
-            }
-        }
-
-        stage ('Generate Release Notes') {
-            steps {
-                withCredentials([usernamePassword(
-                        credentialsId: "${GITHUB_TOKEN_ID}",
-                        passwordVariable: 'GIT_PASSWORD',
-                        usernameVariable: 'GIT_USERNAME')]) {
-                    sh '''
-                        cd presto
-                        git checkout master
-                        # src/release/release-notes.sh $GIT_USERNAME $GIT_PASSWORD
                     '''
                 }
             }
@@ -197,6 +183,21 @@ pipeline {
                         -DstagingProgressTimeoutMinutes=10 \
                         -pl '!presto-test-coverage,!presto-native-execution' 2>&1 | tee /root/mvn-deploy-$(date +%Y%m%dT%H%M%S).log
                 '''
+            }
+        }
+
+        stage ('Generate Release Notes') {
+            steps {
+                withCredentials([usernamePassword(
+                        credentialsId: 'github-token-presto-release-notes',
+                        passwordVariable: 'GIT_PASSWORD',
+                        usernameVariable: 'GIT_USERNAME')]) {
+                    sh '''
+                        cd presto
+                        git checkout master
+                        # src/release/release-notes.sh ${GIT_USERNAME} ${GIT_PASSWORD}
+                    '''
+                }
             }
         }
 
