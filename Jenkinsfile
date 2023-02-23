@@ -108,7 +108,10 @@ pipeline {
 
         stage ('Update Version in Master') {
             steps {
-                withCredentials([usernamePassword(credentialsId: "${GITHUB_CREDENTIAL_ID}", passwordVariable: 'GIT_PASSWORD', usernameVariable: 'GIT_USERNAME')]) {
+                withCredentials([usernamePassword(
+                        credentialsId: "${GITHUB_TOKEN_ID}",
+                        passwordVariable: 'GIT_PASSWORD',
+                        usernameVariable: 'GIT_USERNAME')]) {
                     sh '''
                         cd presto
                         git reset --hard ${PRESTO_RELEASE_SHA}
@@ -128,7 +131,10 @@ pipeline {
 
         stage ('Push Release Branch/Tag') {
             steps {
-                withCredentials([usernamePassword(credentialsId: "${GITHUB_CREDENTIAL_ID}", passwordVariable: 'GIT_PASSWORD', usernameVariable: 'GIT_USERNAME')]) {
+                withCredentials([usernamePassword(
+                        credentialsId: "${GITHUB_TOKEN_ID}",
+                        passwordVariable: 'GIT_PASSWORD',
+                        usernameVariable: 'GIT_USERNAME')]) {
                     sh '''
                         cd presto
                         ORIGIN="https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/prestodb/presto.git"
@@ -146,7 +152,10 @@ pipeline {
 
         stage ('Generate Release Notes') {
             steps {
-                withCredentials([usernamePassword(credentialsId: "${GITHUB_CREDENTIAL_ID}", passwordVariable: 'GIT_PASSWORD', usernameVariable: 'GIT_USERNAME')]) {
+                withCredentials([usernamePassword(
+                        credentialsId: "${GITHUB_TOKEN_ID}",
+                        passwordVariable: 'GIT_PASSWORD',
+                        usernameVariable: 'GIT_USERNAME')]) {
                     sh '''
                         cd presto
                         git checkout master
@@ -174,6 +183,7 @@ pipeline {
                     cd presto
                     export GPG_TTY=$(tty)
                     mvn -s ${WORKSPACE}/settings.xml -V -B -U -e -T2C clean deploy \
+                        -DaltDeploymentRepository=your_repo_id::file:/tmp/alt-repo
                         -Dgpg.passphrase=${GPG_PASSPHRASE} \
                         -Dmaven.artifact.threads=20 \
                         -Dair.test.jvmsize=5g -Dmaven.wagon.http.retryHandler.count=3 \
@@ -209,6 +219,9 @@ pipeline {
         }
 
         stage ('Release Docker Images') {
+            when {
+                expression {false}
+            }
             steps {
                 container('dind') {
                     sh 'apk update && apk add aws-cli'
