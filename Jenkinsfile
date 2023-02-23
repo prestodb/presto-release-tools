@@ -15,8 +15,6 @@ pipeline {
         AWS_ECR_PUBLIC       = 'public.ecr.aws/c0e3k9s8'
         AWS_S3_PREFIX        = 's3://oss-jenkins/artifact/presto'
         S3_URL_BASE          = 'https://oss-presto-release.s3.amazonaws.com/presto'
-        MAVEN_SETTINGS       = credentials('presto-release-maven-settings')
-        GPG_SECRET           = credentials('presto-release-gpg-secret')
     }
 
     options {
@@ -160,7 +158,9 @@ pipeline {
 
         stage ('Rlease Maven Artifacts') {
             environment {
-                MAVEN_SETTINGS = credentials('presto-release-maven-settings')
+                SONATYPE_NEXUS_CREDS    = credentials('presto-sonatype-nexus-creds')
+                SONATYPE_NEXUS_USERNAME = "$SONATYPE_NEXUS_CREDS_USR"
+                SONATYPE_NEXUS_PASSWORD = "$SONATYPE_NEXUS_CREDS_PSW"
                 GPG_SECRET     = credentials('presto-release-gpg-secret')
                 GPG_TRUST      = credentials("presto-release-gpg-trust")
                 GPG_PASSPHRASE = credentials("presto-release-gpg-passphrase")
@@ -170,11 +170,10 @@ pipeline {
                 sh '''
                     gpg --batch --import ${GPG_SECRET}}
                     gpg --import-ownertrust ${GPG_TRUST}
-                    echo ${MAVEN_SETTINGS} > ./settings.xml
 
                     cd presto
                     export GPG_TTY=$(tty)
-                    mvn -s ./settings.xml -V -B -U -e -T2C clean deploy \
+                    mvn -s ${WORKSPACE}/settings.xml -V -B -U -e -T2C clean deploy \
                         -Dgpg.passphrase=${GPG_PASSPHRASE} \
                         -Dmaven.artifact.threads=20 \
                         -Dair.test.jvmsize=5g -Dmaven.wagon.http.retryHandler.count=3 \
