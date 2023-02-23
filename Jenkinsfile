@@ -158,7 +158,7 @@ pipeline {
         stage ('Release Maven Artifacts') {
             steps {
                 echo 'release all jars and the server tarball to Maven Central'
-                build job: 'pipeline-release-presto-maven-artifacts',
+                build job: 'pipeline-release-maven-artifacts',
                     wait: false,
                     parameters: [
                         string(name: 'PRESTO_REPO_BRANCH_NAME', value: 'release-' + env.PRESTO_RELEASE_VERSION),
