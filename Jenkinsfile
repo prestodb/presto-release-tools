@@ -8,15 +8,13 @@ pipeline {
     }
 
     environment {
-        GITHUB_TOKEN_ID      = 'github-token-presto-release-bot'
-        AWS_CREDENTIAL_ID    = 'aws-jenkins'
-        AWS_DEFAULT_REGION   = 'us-east-1'
-        AWS_ECR              = credentials('aws-ecr-private-registry')
-        AWS_ECR_PUBLIC       = 'public.ecr.aws/c0e3k9s8'
-        AWS_S3_PREFIX        = 's3://oss-jenkins/artifact/presto'
-        S3_URL_BASE          = 'https://oss-presto-release.s3.amazonaws.com/presto'
-        MAVEN_SETTINGS       = credentials('presto-release-maven-settings')
-        GPG_SECRET           = credentials('presto-release-gpg-secret')
+        GITHUB_OSS_TOKEN_ID = 'github-token-presto-release-bot'
+        AWS_CREDENTIAL_ID   = 'aws-jenkins'
+        AWS_DEFAULT_REGION  = 'us-east-1'
+        AWS_ECR             = credentials('aws-ecr-private-registry')
+        AWS_ECR_PUBLIC      = 'public.ecr.aws/c0e3k9s8'
+        AWS_S3_PREFIX       = 's3://oss-jenkins/artifact/presto'
+        S3_URL_BASE         = 'https://oss-presto-release.s3.amazonaws.com/presto'
     }
 
     options {
@@ -43,7 +41,7 @@ pipeline {
                         ]],
                         submoduleCfg: [],
                         userRemoteConfigs: [[
-                            credentialsId: "${GITHUB_TOKEN_ID}",
+                            credentialsId: "${GITHUB_OSS_TOKEN_ID}",
                             url: 'https://github.com/prestodb/presto.git'
                         ]]
                 sh '''
@@ -51,7 +49,9 @@ pipeline {
                     git config --global --add safe.directory ${PWD}
                     git config --global user.email "oss-release-bot@prestodb.io"
                     git config --global user.name "oss-release-bot"
+                    git config pull.rebase false
                     git branch
+                    git switch -c master
                     mvn versions:set -DremoveSnapshot -ntp
                 '''
                 script {
@@ -110,7 +110,10 @@ pipeline {
 
         stage ('Update Version in Master') {
             steps {
-                withCredentials([usernamePassword(credentialsId: "${GITHUB_CREDENTIAL_ID}", passwordVariable: 'GIT_PASSWORD', usernameVariable: 'GIT_USERNAME')]) {
+                withCredentials([usernamePassword(
+                        credentialsId: "${GITHUB_OSS_TOKEN_ID}",
+                        passwordVariable: 'GIT_PASSWORD',
+                        usernameVariable: 'GIT_USERNAME')]) {
                     sh '''
                         cd presto
                         git reset --hard ${PRESTO_RELEASE_SHA}
@@ -119,10 +122,12 @@ pipeline {
                         mvn release:branch --batch-mode  \
                             -DbranchName=release-${PRESTO_RELEASE_VERSION} \
                             -DgenerateBackupPoms=false
-                        git checkout -b master-version-update-${PRESTO_RELEASE_VERSION}
-                        git branch
                         ORIGIN="https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/prestodb/presto.git"
-                        git push --set-upstream --dry-run ${ORIGIN} master
+                        git branch
+                        cat pom.xml
+                        git pull ${ORIGIN} master
+                        git log --pretty="format:%ce: %s" -5
+                        git push --set-upstream ${ORIGIN} master
                     '''
                 }
             }
@@ -130,64 +135,50 @@ pipeline {
 
         stage ('Push Release Branch/Tag') {
             steps {
-                withCredentials([usernamePassword(credentialsId: "${GITHUB_CREDENTIAL_ID}", passwordVariable: 'GIT_PASSWORD', usernameVariable: 'GIT_USERNAME')]) {
+                withCredentials([usernamePassword(
+                        credentialsId: "${GITHUB_OSS_TOKEN_ID}",
+                        passwordVariable: 'GIT_PASSWORD',
+                        usernameVariable: 'GIT_USERNAME')]) {
                     sh '''
                         cd presto
                         ORIGIN="https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/prestodb/presto.git"
                         git checkout release-${PRESTO_RELEASE_VERSION}
                         git tag -a ${PRESTO_RELEASE_VERSION} -m "stable release ${PRESTO_RELEASE_VERSION}"
-                        git push --dry-run ${ORIGIN} ${PRESTO_RELEASE_VERSION}
+                        git push ${ORIGIN} ${PRESTO_RELEASE_VERSION}
                         mvn versions:set -DnewVersion="${PRESTO_RELEASE_VERSION}.1-SNAPSHOT" -DgenerateBackupPoms=false
                         git add .
                         git commit -m "Update stable release branch development version to ${PRESTO_RELEASE_VERSION}.1-SNAPSHOT"
-                        git push --set-upstream --dry-run ${ORIGIN} release-${PRESTO_RELEASE_VERSION}
+                        git log --pretty="format:%ce: %s" -5
+                        git push --set-upstream ${ORIGIN} release-${PRESTO_RELEASE_VERSION}
                     '''
                 }
+            }
+        }
+
+        stage ('Release Maven Artifacts') {
+            steps {
+                echo 'release all jars and the server tarball to Maven Central'
+                build job: 'pipeline-release-presto-maven-artifacts',
+                    wait: false,
+                    parameters: [
+                        string(name: 'PRESTO_REPO_BRANCH_NAME', value: 'release-' + env.PRESTO_RELEASE_VERSION),
+                        string(name: 'PRESTO_RELEASE_VERSION',  value: env.PRESTO_RELEASE_VERSION)
+                    ]
             }
         }
 
         stage ('Generate Release Notes') {
             steps {
-                withCredentials([usernamePassword(credentialsId: "${GITHUB_CREDENTIAL_ID}", passwordVariable: 'GIT_PASSWORD', usernameVariable: 'GIT_USERNAME')]) {
+                withCredentials([usernamePassword(
+                        credentialsId: 'github-token-presto-release-notes',
+                        passwordVariable: 'GIT_PASSWORD',
+                        usernameVariable: 'GIT_USERNAME')]) {
                     sh '''
                         cd presto
                         git checkout master
-                        # src/release/release-notes.sh $GIT_USERNAME $GIT_PASSWORD
+                        src/release/release-notes.sh ${GIT_USERNAME} ${GIT_PASSWORD}
                     '''
                 }
-            }
-        }
-
-        stage ('Rlease Maven Artifacts') {
-            environment {
-                MAVEN_SETTINGS = credentials('presto-release-maven-settings')
-                GPG_SECRET     = credentials('presto-release-gpg-secret')
-                GPG_TRUST      = credentials("presto-release-gpg-trust")
-                GPG_PASSPHRASE = credentials("presto-release-gpg-passphrase")
-            }
-            steps {
-                echo 'release all jars and the server tarball to Maven Central'
-                sh '''
-                    gpg --batch --import ${GPG_SECRET}}
-                    gpg --import-ownertrust ${GPG_TRUST}
-                    echo ${MAVEN_SETTINGS} > ./settings.xml
-
-                    cd presto
-                    export GPG_TTY=$(tty)
-                    mvn -s ./settings.xml -V -B -U -e -T2C clean deploy \
-                        -Dgpg.passphrase=${GPG_PASSPHRASE} \
-                        -Dmaven.artifact.threads=20 \
-                        -Dair.test.jvmsize=5g -Dmaven.wagon.http.retryHandler.count=3 \
-                        -DskipTests \
-                        -Poss-release \
-                        -Pdeploy-to-ossrh \
-                        -DstagingProfileId=28a0d8c4350ed \
-                        -DkeepStagingRepositoryOnFailure=true \
-                        -DkeepStagingRepositoryOnCloseRuleFailure=true \
-                        -DautoReleaseAfterClose=true \
-                        -DstagingProgressTimeoutMinutes=10 \
-                        -pl '!presto-test-coverage,!presto-native-execution' 2>&1 | tee /root/mvn-deploy-$(date +%Y%m%dT%H%M%S).log
-                '''
             }
         }
 
