@@ -21,7 +21,7 @@ pipeline {
     options {
         disableConcurrentBuilds()
         buildDiscarder(logRotator(numToKeepStr: '500'))
-        timeout(time: 1, unit: 'HOURS')
+        timeout(time: 5, unit: 'HOURS')
     }
 
     parameters {
@@ -36,7 +36,7 @@ pipeline {
     stages {
         stage('Setup') {
             steps {
-                sh 'apt update && apt install -y git gpg'
+                sh 'apt update && apt install -y bash git gpg'
             }
         }
 
@@ -70,13 +70,15 @@ pipeline {
         stage ('Rlease Maven Artifacts') {
             steps {
                 echo 'release all jars and the server tarball to Maven Central'
-                sh '''
+                sh '''#!/bin/bash -ex
+                    export GPG_TTY=${TTY}
+                    echo $GPG_TTY
                     gpg --batch --import ${GPG_SECRET}
                     echo ${GPG_TRUST} | gpg --import-ownertrust -
                     gpg --list-secret-keys
+                    echo "allow-loopback-pinentry" >> ~/.gnupg/gpg-agent.conf
 
                     cd presto
-                    export GPG_TTY=$(tty)
                     mvn -s ${WORKSPACE}/settings.xml -V -B -U -e -T2C clean deploy \
                         -Dgpg.passphrase=${GPG_PASSPHRASE} \
                         -Dmaven.artifact.threads=20 \
@@ -88,8 +90,8 @@ pipeline {
                         -DkeepStagingRepositoryOnFailure=true \
                         -DkeepStagingRepositoryOnCloseRuleFailure=true \
                         -DautoReleaseAfterClose=true \
-                        -DstagingProgressTimeoutMinutes=10 \
-                        -pl '!presto-test-coverage,!presto-native-execution' 2>&1 | tee /root/mvn-deploy-$(date +%Y%m%dT%H%M%S).log
+                        -DstagingProgressTimeoutMinutes=60 \
+                        -pl '!presto-test-coverage,!presto-native-execution'
                 '''
             }
         }
