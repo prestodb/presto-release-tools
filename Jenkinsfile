@@ -8,7 +8,7 @@ pipeline {
     }
 
     environment {
-        GITHUB_TOKEN  = 'edc8b6f756406d8231c3b806c97de1684c273b3a'
+        GITHUB_TOKEN_ID = 'github-token-presto-release-bot'
     }
 
     options {
@@ -70,14 +70,16 @@ pipeline {
                          ]],
                          submoduleCfg: [],
                          userRemoteConfigs: [[
+                             credentialsId: "${GITHUB_TOKEN_ID}",
                              url: 'https://github.com/prestodb/prestodb.github.io.git'
                          ]]
                 sh '''
                     cd prestodb.github.io
                     git config --global --add safe.directory ${WORKSPACE}/prestodb.github.io
-                    git config --global user.name "OSS CI Infra bot"
-                    git config --global user.email "wanglinsong@gmail.com"
-                    git checkout -b source
+                    git config --global user.email "presto-release-bot@prestodb.io"
+                    git config --global user.name "presto-release-bot"
+                    git switch source
+                    git branch -vv
                 '''
             }
         }
@@ -120,19 +122,27 @@ pipeline {
                     echo "const presto_latest_date = '${DATE}';" >> ${VERSION_JS}
                     cat ${VERSION_JS}
                     git add ${VERSION_JS}
+                    git status
                 '''
             }
         }
 
         stage ('Push Updates') {
             steps {
-                sh '''
-                    cd prestodb.github.io
+                withCredentials([
+                        usernamePassword(
+                            credentialsId: "${GITHUB_TOKEN_ID}",
+                            passwordVariable: 'GIT_PASSWORD',
+                            usernameVariable: 'GIT_USERNAME')]) {
+                    sh '''
+                        cd prestodb.github.io
+                        ORIGIN="https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/prestodb/prestodb.github.io.git"
 
-                    git status
-                    git commit -m "Add ${VERSION_TO_BE_RELEASED} docs"
-                    git push -q https://${GITHUB_TOKEN}@github.com/prestodb/prestodb.github.io.git source:source
-                '''
+                        git status
+                        git commit -m "Add ${VERSION_TO_BE_RELEASED} docs"
+                        git push --set-upstream ${ORIGIN} source
+                    '''
+                }
             }
         }
     }
