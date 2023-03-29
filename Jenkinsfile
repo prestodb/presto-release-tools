@@ -112,11 +112,11 @@ pipeline {
                             sha=$(echo $TAG | awk -F- '{print $3}')
                             if git merge-base --is-ancestor $sha HEAD
                             then
-                                echo done
                                 echo $TAG > release-tag.txt
                                 break
                             fi
                         done
+                        ls -al
                         cat release-tag.txt
                     '''
                     script {
