@@ -67,9 +67,8 @@ pipeline {
             }
         }
 
-        stage ('Rlease Maven Artifacts') {
+        stage ('Setup GPG') {
             steps {
-                echo 'release all jars and the server tarball to Maven Central'
                 sh '''#!/bin/bash -ex
                     export GPG_TTY=${TTY}
                     echo $GPG_TTY
@@ -77,21 +76,31 @@ pipeline {
                     echo ${GPG_TRUST} | gpg --import-ownertrust -
                     gpg --list-secret-keys
                     echo "allow-loopback-pinentry" >> ~/.gnupg/gpg-agent.conf
+                '''
+            }
+        }
+
+        stage ('Release Maven Artifacts') {
+            options {
+                retry(3)
+            }
+            steps {
+                echo 'release all jars and the server tarball to Maven Central'
+                sh '''#!/bin/bash -ex
+                    export GPG_TTY=${TTY}
 
                     cd presto
                     mvn -s ${WORKSPACE}/settings.xml -V -B -U -e -T2C clean deploy \
                         -Dgpg.passphrase=${GPG_PASSPHRASE} \
-                        -Dmaven.artifact.threads=20 \
                         -Dmaven.wagon.http.retryHandler.count=8 \
-                        -Dair.test.jvmsize=5g \
                         -DskipTests \
-                        -Poss-release \
-                        -Pdeploy-to-ossrh \
                         -DstagingProfileId=28a0d8c4350ed \
                         -DkeepStagingRepositoryOnFailure=true \
                         -DkeepStagingRepositoryOnCloseRuleFailure=true \
                         -DautoReleaseAfterClose=true \
                         -DstagingProgressTimeoutMinutes=60 \
+                        -Poss-release \
+                        -Pdeploy-to-ossrh \
                         -pl '!presto-docs,!presto-test-coverage,!presto-native-execution'
                 '''
             }
