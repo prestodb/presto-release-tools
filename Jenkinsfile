@@ -91,7 +91,7 @@ pipeline {
                         -DkeepStagingRepositoryOnCloseRuleFailure=true \
                         -DautoReleaseAfterClose=true \
                         -DstagingProgressTimeoutMinutes=60 \
-                        -pl '!presto-test-coverage,!presto-native-execution'
+                        -pl '!presto-docs,!presto-test-coverage,!presto-native-execution'
                 '''
             }
         }
