@@ -176,7 +176,8 @@ pipeline {
                     sh '''
                         cd presto
                         git checkout master
-                        src/release/release-notes.sh ${GIT_USERNAME} ${GIT_PASSWORD}
+                        # src/release/release-notes.sh ${GIT_USERNAME} ${GIT_PASSWORD}
+                        echo "this will be done manually"
                     '''
                 }
             }
