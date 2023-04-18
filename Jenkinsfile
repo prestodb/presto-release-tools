@@ -82,7 +82,8 @@ pipeline {
                     mvn -s ${WORKSPACE}/settings.xml -V -B -U -e -T2C clean deploy \
                         -Dgpg.passphrase=${GPG_PASSPHRASE} \
                         -Dmaven.artifact.threads=20 \
-                        -Dair.test.jvmsize=5g -Dmaven.wagon.http.retryHandler.count=3 \
+                        -Dmaven.wagon.http.retryHandler.count=8 \
+                        -Dair.test.jvmsize=5g \
                         -DskipTests \
                         -Poss-release \
                         -Pdeploy-to-ossrh \
