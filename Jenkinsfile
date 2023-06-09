@@ -13,7 +13,7 @@ pipeline {
         AWS_DEFAULT_REGION = 'us-east-1'
         AWS_ECR            = credentials('aws-ecr-private-registry')
         AWS_S3_PREFIX      = 's3://oss-jenkins/artifact/presto'
-        AWS_ECR_PUBLIC     = 'public.ecr.aws/c0e3k9s8'
+        DOCKER_PUBLIC      = 'docker.io/prestodb'
         S3_URL_BASE        = 'https://oss-presto-release.s3.amazonaws.com/presto'
     }
 
@@ -171,18 +171,27 @@ pipeline {
             steps {
                 container('dind') {
                     sh 'apk update && apk add aws-cli'
-                    withCredentials([[
+                    withCredentials([
+                        [
                             $class: 'AmazonWebServicesCredentialsBinding',
                             credentialsId: "${AWS_CREDENTIAL_ID}",
                             accessKeyVariable: 'AWS_ACCESS_KEY_ID',
-                            secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
+                            secretKeyVariable: 'AWS_SECRET_ACCESS_KEY'
+                        ],
+                        [
+                            usernamePassword(
+                                credentialsId: 'docker-hub-prestodb-push-token',
+                                usernameVariable: 'DOCKERHUB_USERNAME',
+                                passwordVariable: 'DOCKERHUB_PASSWORD')
+                        ]
+                    ]) {
                         sh '''
                             aws ecr get-login-password | docker login --username AWS --password-stdin ${AWS_ECR}
                             docker pull "${AWS_ECR}/oss-presto/presto:${DOCKER_IMAGE_TAG}"
-                            docker tag "${AWS_ECR}/oss-presto/presto:${DOCKER_IMAGE_TAG}" "${AWS_ECR_PUBLIC}/presto:${PRESTO_EDGE_RELEASE_VERSION}"
+                            docker tag "${AWS_ECR}/oss-presto/presto:${DOCKER_IMAGE_TAG}" "${DOCKER_PUBLIC}/presto:${PRESTO_EDGE_RELEASE_VERSION}"
                             docker image ls
-                            aws ecr-public get-login-password | docker login --username AWS --password-stdin ${AWS_ECR_PUBLIC}
-                            docker push ${AWS_ECR_PUBLIC}/presto:${PRESTO_EDGE_RELEASE_VERSION}
+                            echo ${DOCKERHUB_PASSWORD} | docker login --username ${DOCKERHUB_USERNAME} --password-stdin
+                            docker push ${DOCKER_PUBLIC}/presto:${PRESTO_EDGE_RELEASE_VERSION}
                         '''
                     }
                 }
