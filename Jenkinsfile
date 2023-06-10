@@ -168,29 +168,24 @@ pipeline {
         }
 
         stage ('Create Release Docker Image') {
+            environment {
+                DOCKERHUB_PRESTODB_CREDS = credentials('docker-hub-prestodb-push-token')
+            }
             steps {
                 container('dind') {
                     sh 'apk update && apk add aws-cli'
-                    withCredentials([
-                        [
+                    withCredentials([[
                             $class: 'AmazonWebServicesCredentialsBinding',
                             credentialsId: "${AWS_CREDENTIAL_ID}",
                             accessKeyVariable: 'AWS_ACCESS_KEY_ID',
                             secretKeyVariable: 'AWS_SECRET_ACCESS_KEY'
-                        ],
-                        [
-                            usernamePassword(
-                                credentialsId: 'docker-hub-prestodb-push-token',
-                                usernameVariable: 'DOCKERHUB_USERNAME',
-                                passwordVariable: 'DOCKERHUB_PASSWORD')
-                        ]
-                    ]) {
+                        ]]) {
                         sh '''
                             aws ecr get-login-password | docker login --username AWS --password-stdin ${AWS_ECR}
                             docker pull "${AWS_ECR}/oss-presto/presto:${DOCKER_IMAGE_TAG}"
                             docker tag "${AWS_ECR}/oss-presto/presto:${DOCKER_IMAGE_TAG}" "${DOCKER_PUBLIC}/presto:${PRESTO_EDGE_RELEASE_VERSION}"
                             docker image ls
-                            echo ${DOCKERHUB_PASSWORD} | docker login --username ${DOCKERHUB_USERNAME} --password-stdin
+                            echo ${DOCKERHUB_PRESTODB_CREDS_PSW} | docker login --username ${DOCKERHUB_PRESTODB_CREDS_USR} --password-stdin
                             docker push ${DOCKER_PUBLIC}/presto:${PRESTO_EDGE_RELEASE_VERSION}
                         '''
                     }
