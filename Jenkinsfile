@@ -12,7 +12,6 @@ pipeline {
         AWS_CREDENTIAL_ID   = 'aws-jenkins'
         AWS_DEFAULT_REGION  = 'us-east-1'
         AWS_ECR             = credentials('aws-ecr-private-registry')
-        AWS_ECR_PUBLIC      = 'public.ecr.aws/c0e3k9s8'
         AWS_S3_PREFIX       = 's3://oss-jenkins/artifact/presto'
         S3_URL_BASE         = 'https://oss-presto-release.s3.amazonaws.com/presto'
     }
@@ -26,7 +25,7 @@ pipeline {
     stages {
         stage('Setup') {
             steps {
-                sh 'apt update && apt install -y awscli git jq tree'
+                sh 'apt update && apt install -y awscli git jq make python3 python3-venv tree'
             }
         }
 
@@ -52,7 +51,7 @@ pipeline {
                     git config pull.rebase false
                     git branch
                     git switch -c master
-                    mvn versions:set -DremoveSnapshot -ntp
+                    unset MAVEN_CONFIG && ./mvnw versions:set -DremoveSnapshot -ntp
                 '''
                 script {
                     env.PRESTO_RELEASE_VERSION = sh(
@@ -75,7 +74,7 @@ pipeline {
                         credentialsId: "${AWS_CREDENTIAL_ID}",
                         accessKeyVariable: 'AWS_ACCESS_KEY_ID',
                         secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
-                    sh '''#!/bin/bash -ex
+                    sh '''#!/usr/bin/env bash -ex
                         cd presto
                         TAGS=($(aws ecr list-images --repository-name oss-presto/presto \
                             | jq -r '.imageIds[].imageTag | select( . != null)' \
@@ -114,26 +113,29 @@ pipeline {
                         credentialsId: "${GITHUB_OSS_TOKEN_ID}",
                         passwordVariable: 'GIT_PASSWORD',
                         usernameVariable: 'GIT_USERNAME')]) {
-                    sh '''
+                    sh '''#!/usr/bin/env bash -ex
                         cd presto
                         git reset --hard ${PRESTO_RELEASE_SHA}
                         git --no-pager log --since="40 days ago" --graph --pretty=format:'%C(auto)%h%d%Creset %C(cyan)(%cd)%Creset %C(green)%cn <%ce>%Creset %s'
 
-                        mvn release:branch --batch-mode  \
-                            -DbranchName=release-${PRESTO_RELEASE_VERSION} \
-                            -DgenerateBackupPoms=false
+                        PRESTO_BUILD_VERSION_MAJOR=$(echo ${PRESTO_RELEASE_VERSION} | awk -F. '{print $1}')
+                        PRESTO_BUILD_VERSION_MINOR=$(echo ${PRESTO_RELEASE_VERSION} | awk -F. '{print $2}')
+                        unset MAVEN_CONFIG && ./mvnw release:prepare --batch-mode -DskipTests \
+                            -DautoVersionSubmodules \
+                            -DdevelopmentVersion="${PRESTO_BUILD_VERSION_MAJOR}.$((PRESTO_BUILD_VERSION_MINOR+1))-SNAPSHOT"
+
                         ORIGIN="https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/prestodb/presto.git"
-                        git branch
-                        cat pom.xml
+                        head -n 18 pom.xml
                         git pull ${ORIGIN} master
                         git log --pretty="format:%ce: %s" -5
-                        git push --set-upstream ${ORIGIN} master
+                        git push --follow-tags --set-upstream ${ORIGIN} master
+
                     '''
                 }
             }
         }
 
-        stage ('Push Release Branch/Tag') {
+        stage ('Push Release Branch') {
             steps {
                 withCredentials([usernamePassword(
                         credentialsId: "${GITHUB_OSS_TOKEN_ID}",
@@ -142,10 +144,11 @@ pipeline {
                     sh '''
                         cd presto
                         ORIGIN="https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/prestodb/presto.git"
-                        git checkout release-${PRESTO_RELEASE_VERSION}
-                        git tag -a ${PRESTO_RELEASE_VERSION} -m "stable release ${PRESTO_RELEASE_VERSION}"
-                        git push ${ORIGIN} ${PRESTO_RELEASE_VERSION}
-                        mvn versions:set -DnewVersion="${PRESTO_RELEASE_VERSION}.1-SNAPSHOT" -DgenerateBackupPoms=false
+
+                        git checkout ${PRESTO_RELEASE_VERSION}
+                        git switch -c release-${PRESTO_RELEASE_VERSION}
+
+                        unset MAVEN_CONFIG && ./mvnw versions:set -DnewVersion="${PRESTO_RELEASE_VERSION}.1-SNAPSHOT" -DgenerateBackupPoms=false
                         git add .
                         git commit -m "Update stable release branch development version to ${PRESTO_RELEASE_VERSION}.1-SNAPSHOT"
                         git log --pretty="format:%ce: %s" -5
@@ -168,6 +171,9 @@ pipeline {
         }
 
         stage ('Generate Release Notes') {
+            when {
+                expression { false }
+            }
             steps {
                 withCredentials([usernamePassword(
                         credentialsId: 'github-token-presto-release-notes',
@@ -202,6 +208,10 @@ pipeline {
         }
 
         stage ('Release Docker Images') {
+            environment {
+                DOCKER_PUBLIC = 'docker.io/prestodb'
+                DOCKERHUB_PRESTODB_CREDS = credentials('docker-hub-prestodb-push-token')
+            }
             steps {
                 container('dind') {
                     sh 'apk update && apk add aws-cli'
@@ -210,17 +220,15 @@ pipeline {
                             credentialsId: "${AWS_CREDENTIAL_ID}",
                             accessKeyVariable: 'AWS_ACCESS_KEY_ID',
                             secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
-                        script {
-                            sh '''
-                                aws ecr get-login-password | docker login --username AWS --password-stdin ${AWS_ECR}
-                                docker pull "${AWS_ECR}/oss-presto/presto:${DOCKER_IMAGE_TAG}"
-                                docker tag "${AWS_ECR}/oss-presto/presto:${DOCKER_IMAGE_TAG}" "${AWS_ECR_PUBLIC}/presto:${PRESTO_RELEASE_VERSION}"
-                                docker image ls
+                        sh '''
+                            aws ecr get-login-password | docker login --username AWS --password-stdin ${AWS_ECR}
+                            docker pull "${AWS_ECR}/oss-presto/presto:${DOCKER_IMAGE_TAG}"
+                            docker tag "${AWS_ECR}/oss-presto/presto:${DOCKER_IMAGE_TAG}" "${DOCKER_PUBLIC}/presto:${PRESTO_RELEASE_VERSION}"
+                            docker image ls
 
-                                aws ecr-public get-login-password | docker login --username AWS --password-stdin ${AWS_ECR_PUBLIC}
-                                docker push "${AWS_ECR_PUBLIC}/presto:${PRESTO_RELEASE_VERSION}"
-                            '''
-                        }
+                            echo ${DOCKERHUB_PRESTODB_CREDS_PSW} | docker login --username ${DOCKERHUB_PRESTODB_CREDS_USR} --password-stdin
+                            docker push "${DOCKER_PUBLIC}/presto:${PRESTO_RELEASE_VERSION}"
+                        '''
                     }
                 }
             }
