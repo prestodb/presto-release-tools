@@ -59,10 +59,8 @@ pipeline {
                     git config --global --add safe.directory ${PWD}
                     git config --global user.email "oss-release-bot@prestodb.io"
                     git config --global user.name "oss-release-bot"
-                    git branch
-                    git switch -c ${PRESTO_REPO_BRANCH_NAME}
-                    git branch
-                    mvn versions:set -DnewVersion="${PRESTO_RELEASE_VERSION}" -DgenerateBackupPoms=false -ntp
+                    git checkout ${PRESTO_RELEASE_VERSION}
+                    git log --pretty="format:%ce: %s" -5
                 '''
             }
         }
@@ -86,6 +84,8 @@ pipeline {
             }
             steps {
                 echo 'release all jars and the server tarball to Maven Central'
+                input('Do you want to proceed?')
+
                 sh '''#!/bin/bash -ex
                     export GPG_TTY=${TTY}
 
@@ -101,7 +101,7 @@ pipeline {
                         -DstagingProgressTimeoutMinutes=60 \
                         -Poss-release \
                         -Pdeploy-to-ossrh \
-                        -pl '!presto-open-telemetry,!presto-docs,!presto-test-coverage,!presto-native-execution'
+                        -pl '!presto-docs,!presto-test-coverage,!presto-native-execution'
                 '''
             }
         }
