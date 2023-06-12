@@ -222,5 +222,15 @@ pipeline {
                 }
             }
         }
+
+        stage ('Run Benchto') {
+            steps {
+                build job: '/presto-cluster-pipelines/oss-release/dvt-prestodb-benchto',
+                    wait: false,
+                    parameters: [
+                        string(name: 'PRESTO_BRANCH', value: env.EDGE_BRANCH)
+                    ]
+            }
+        }
     }
 }
