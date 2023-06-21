@@ -228,7 +228,7 @@ pipeline {
                 build job: '/oss-presto-pipelines/oss-release/dvt-prestodb-benchto',
                     wait: false,
                     parameters: [
-                        string(name: 'PRESTO_BRANCH', value: env.EDGE_BRANCH)
+                        string(name: 'PRESTO_BRANCH', value: "release-" + env.PRESTO_EDGE_RELEASE_VERSION)
                     ]
             }
         }
