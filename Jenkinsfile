@@ -8,7 +8,7 @@ pipeline {
     }
 
     environment {
-        GITHUB_TOKEN_ID = 'github-token-presto-release-bot'
+        GITHUB_TOKEN_ID = 'github-token-wanglinsong'
     }
 
     options {
@@ -71,7 +71,7 @@ pipeline {
                          submoduleCfg: [],
                          userRemoteConfigs: [[
                              credentialsId: "${GITHUB_TOKEN_ID}",
-                             url: 'https://github.com/prestodb/prestodb.github.io.git'
+                             url: 'https://github.com/wanglinsong/prestodb.github.io.git'
                          ]]
                 sh '''
                     cd prestodb.github.io
@@ -80,6 +80,9 @@ pipeline {
                     git config --global user.name "presto-release-bot"
                     git switch source
                     git branch -vv
+                    git remote add upstream https://github.com/prestodb/prestodb.github.io.git
+                    git fetch upstream
+                    git rebase upstream/source
                 '''
             }
         }
@@ -136,7 +139,7 @@ pipeline {
                             usernameVariable: 'GIT_USERNAME')]) {
                     sh '''
                         cd prestodb.github.io
-                        ORIGIN="https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/prestodb/prestodb.github.io.git"
+                        ORIGIN="https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/wanglinsong/prestodb.github.io.git"
 
                         git status
                         git commit -m "Add ${VERSION_TO_BE_RELEASED} docs"
