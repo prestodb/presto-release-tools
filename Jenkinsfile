@@ -207,6 +207,9 @@ pipeline {
                         git reset --hard
                         git checkout ${PRESTO_RELEASE_SHA}
                         git checkout -b ${EDGE_BRANCH}
+                        git tag -a ${PRESTO_EDGE_RELEASE_VERSION} -m "edge release ${PRESTO_EDGE_RELEASE_VERSION}"
+                        git push ${ORIGIN} ${PRESTO_EDGE_RELEASE_VERSION}
+
                         unset MAVEN_CONFIG && ./mvnw --batch-mode release:update-versions -DautoVersionSubmodules=true \
                             -DdevelopmentVersion="${PRESTO_EDGE_RELEASE_VERSION}-SNAPSHOT"
                         git config -l
