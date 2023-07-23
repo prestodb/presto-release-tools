@@ -8,56 +8,26 @@ pipeline {
     }
 
     environment {
-        GITHUB_TOKEN_ID    = 'github-token-presto-release-bot'
         AWS_CREDENTIAL_ID  = 'aws-jenkins'
-        AWS_DEFAULT_REGION = 'us-east-1'
-        AWS_ECR            = credentials('aws-ecr-private-registry')
-        AWS_S3_PREFIX      = 's3://oss-jenkins/artifact/presto'
+        AWS_S3_PREFIX      = 's3://oss-presto-release/presto'
         DOCKER_PUBLIC      = 'docker.io/prestodb'
-        S3_URL_BASE        = 'https://oss-presto-release.s3.amazonaws.com/presto'
+        GITHUB_TOKEN_ID    = 'github-token-presto-release-bot'
     }
 
     options {
+        buildDiscarder(logRotator(numToKeepStr: '100'))
         disableConcurrentBuilds()
-        buildDiscarder(logRotator(numToKeepStr: '500'))
-        timeout(time: 1, unit: 'HOURS')
+        disableResume()
+        overrideIndexTriggers(false)
+        timeout(time: 3, unit: 'HOURS')
+        timestamps()
     }
 
     triggers {
-        cron('H 12 * * 2')
+        cron('H 10 * * 2')
     }
 
     stages {
-        stage ('Setup') {
-            steps {
-                sh 'apt update && apt install -y awscli git jq tree'
-            }
-        }
-
-        stage ('Load Scripts') {
-            steps {
-                checkout $class: 'GitSCM',
-                         branches: [[name: '*/master']],
-                         doGenerateSubmoduleConfigurations: false,
-                         extensions: [[
-                             $class: 'RelativeTargetDirectory',
-                             relativeTargetDir: 'presto-release-tools'
-                         ],[
-                             $class: 'CloneOption',
-                             shallow: true,
-                             noTags:  true,
-                             depth:   1,
-                             timeout: 10
-                         ]],
-                         submoduleCfg: [],
-                         userRemoteConfigs: [[
-                             credentialsId: "${GITHUB_TOKEN_ID}",
-                             url: 'https://github.com/prestodb/presto-release-tools'
-                         ]]
-                echo 'all Jenkins pipeline related scripts are located in folder ./presto-release-tools/scripts'
-            }
-        }
-
         stage ('Load Presto Source') {
             steps {
                 checkout $class: 'GitSCM',
@@ -75,8 +45,9 @@ pipeline {
                 sh '''
                     cd presto
                     git config --global --add safe.directory ${PWD}
-                    git config --global user.email "presto-release-bot@prestodb.io"
-                    git config --global user.name "presto-release-bot"
+                    git switch -C master
+                    git config --global user.email "oss-release-bot@prestodb.io"
+                    git config --global user.name "oss-release-bot"
                     unset MAVEN_CONFIG && ./mvnw versions:set -DremoveSnapshot -ntp
                 '''
                 script {
@@ -89,47 +60,6 @@ pipeline {
                     cd presto
                     git reset --hard
                 '''
-            }
-        }
-
-        stage ('Search Artifacts') {
-            steps {
-                echo "query for presto docker images with release version ${PRESTO_STABLE_RELEASE_VERSION}"
-                withCredentials([[
-                        $class: 'AmazonWebServicesCredentialsBinding',
-                        credentialsId: "${AWS_CREDENTIAL_ID}",
-                        accessKeyVariable: 'AWS_ACCESS_KEY_ID',
-                        secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
-                    sh '''#!/bin/bash -ex
-                        cd presto
-                        TAGS=($(aws ecr list-images --repository-name oss-presto/presto \
-                            | jq -r '.imageIds[].imageTag | select( . != null)' \
-                            | grep "${PRESTO_STABLE_RELEASE_VERSION}-20" \
-                            | sort -r))
-                        for TAG in $TAGS
-                        do
-                            echo $TAG
-                            sha=$(echo $TAG | awk -F- '{print $3}')
-                            if git merge-base --is-ancestor $sha HEAD
-                            then
-                                echo $TAG > release-tag.txt
-                                break
-                            fi
-                        done
-                        ls -al
-                        cat release-tag.txt
-                    '''
-                    script {
-                        env.DOCKER_IMAGE_TAG = sh(
-                            script: 'cat presto/release-tag.txt',
-                            returnStdout: true).trim()
-                        env.PRESTO_BUILD_VERSION = env.DOCKER_IMAGE_TAG.substring(0, env.DOCKER_IMAGE_TAG.lastIndexOf('-'));
-                        env.PRESTO_RELEASE_SHA = env.PRESTO_BUILD_VERSION.substring(env.PRESTO_BUILD_VERSION.lastIndexOf('-') + 1);
-                    }
-                }
-                sh 'printenv | sort'
-                echo "${AWS_S3_PREFIX}/${PRESTO_BUILD_VERSION}/presto-server-${PRESTO_STABLE_RELEASE_VERSION}.tar.gz"
-                echo "${AWS_ECR}/oss-presto/presto:${DOCKER_IMAGE_TAG}"
             }
         }
 
@@ -146,54 +76,15 @@ pipeline {
                     env.PRESTO_EDGE_RELEASE_VERSION = sh(
                         script: 'cat presto/PRESTO_EDGE_RELEASE_VERSION.version',
                         returnStdout: true).trim()
-                }
-            }
-        }
-
-        stage ('Create Release Packages') {
-            steps {
-                withCredentials([[
-                        $class: 'AmazonWebServicesCredentialsBinding',
-                        credentialsId: "${AWS_CREDENTIAL_ID}",
-                        accessKeyVariable: 'AWS_ACCESS_KEY_ID',
-                        secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
-                    sh '''
-                        aws s3 ls "${AWS_S3_PREFIX}/${PRESTO_BUILD_VERSION}/"
-                        aws s3 cp "${AWS_S3_PREFIX}/${PRESTO_BUILD_VERSION}/" "s3://oss-presto-release/presto/${PRESTO_EDGE_RELEASE_VERSION}/" --recursive --no-progress
-                    '''
-                    echo "${S3_URL_BASE}/${PRESTO_EDGE_RELEASE_VERSION}/presto-server-${PRESTO_STABLE_RELEASE_VERSION}.tar.gz"
-                    echo "${S3_URL_BASE}/${PRESTO_EDGE_RELEASE_VERSION}/presto-cli-${PRESTO_STABLE_RELEASE_VERSION}-executable.jar"
-                }
-            }
-        }
-
-        stage ('Create Release Docker Image') {
-            environment {
-                DOCKERHUB_PRESTODB_CREDS = credentials('docker-hub-prestodb-push-token')
-            }
-            steps {
-                container('dind') {
-                    sh 'apk update && apk add aws-cli'
-                    withCredentials([[
-                            $class: 'AmazonWebServicesCredentialsBinding',
-                            credentialsId: "${AWS_CREDENTIAL_ID}",
-                            accessKeyVariable: 'AWS_ACCESS_KEY_ID',
-                            secretKeyVariable: 'AWS_SECRET_ACCESS_KEY'
-                        ]]) {
-                        sh '''
-                            aws ecr get-login-password | docker login --username AWS --password-stdin ${AWS_ECR}
-                            docker pull "${AWS_ECR}/oss-presto/presto:${DOCKER_IMAGE_TAG}"
-                            docker tag "${AWS_ECR}/oss-presto/presto:${DOCKER_IMAGE_TAG}" "${DOCKER_PUBLIC}/presto:${PRESTO_EDGE_RELEASE_VERSION}"
-                            docker image ls
-                            echo ${DOCKERHUB_PRESTODB_CREDS_PSW} | docker login --username ${DOCKERHUB_PRESTODB_CREDS_USR} --password-stdin
-                            docker push ${DOCKER_PUBLIC}/presto:${PRESTO_EDGE_RELEASE_VERSION}
-                        '''
-                    }
+                    env.EDGE_BRANCH = "release-" + env.PRESTO_EDGE_RELEASE_VERSION
                 }
             }
         }
 
         stage ('Create Release Branch') {
+            options {
+                retry(5)
+            }
             steps {
                 withCredentials([
                         usernamePassword(
@@ -201,26 +92,79 @@ pipeline {
                             passwordVariable: 'GIT_PASSWORD',
                             usernameVariable: 'GIT_USERNAME')]) {
                     sh '''
-                        cd presto
                         ORIGIN="https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/prestodb/presto.git"
-                        EDGE_BRANCH="release-${PRESTO_EDGE_RELEASE_VERSION}"
+                        cd presto
+                        git checkout master
                         git reset --hard
-                        git checkout ${PRESTO_RELEASE_SHA}
+                        git branch -D ${EDGE_BRANCH} || echo OK
+                        rm release.properties || echo OK
                         git checkout -b ${EDGE_BRANCH}
-                        git tag -a ${PRESTO_EDGE_RELEASE_VERSION} -m "edge release ${PRESTO_EDGE_RELEASE_VERSION}"
-                        git push ${ORIGIN} ${PRESTO_EDGE_RELEASE_VERSION}
+                        git log -5
 
-                        unset MAVEN_CONFIG && ./mvnw --batch-mode release:update-versions -DautoVersionSubmodules=true \
-                            -DdevelopmentVersion="${PRESTO_EDGE_RELEASE_VERSION}-SNAPSHOT"
-                        git config -l
-                        git status | grep pom.xml | grep -v versionsBackup  | awk '{print $2}' | xargs git add
-                        git status
-                        git commit \
-                            -m "Prepare for next development iteration - ${PRESTO_EDGE_RELEASE_VERSION}-SNAPSHOT" \
-                            --author="oss-release-bot <oss-release-bot@prestodb.io>"
-                        git log -n 3
-                        git branch
-                        git push --set-upstream ${ORIGIN} ${EDGE_BRANCH}
+                        unset MAVEN_CONFIG && ./mvnw --batch-mode release:prepare \
+                            -DautoVersionSubmodules=true -DgenerateBackupPoms=false -DskipTests \
+                            -DdevelopmentVersion="${PRESTO_EDGE_RELEASE_VERSION}.1-SNAPSHOT" \
+                            -DreleaseVersion="${PRESTO_EDGE_RELEASE_VERSION}" \
+                            -Dtag="${PRESTO_EDGE_RELEASE_VERSION}"
+                        git log -5
+                        git push --follow-tags --set-upstream ${ORIGIN} ${EDGE_BRANCH}
+                    '''
+                }
+            }
+        }
+
+        stage ('Build Docker Images') {
+            options {
+                retry(3)
+            }
+            steps {
+                sh 'sleep 10'
+                script {
+                    def downstream =
+                        build job: '/prestodb/presto/' + env.EDGE_BRANCH,
+                            wait: true,
+                            parameters: [
+                                booleanParam(name: 'PUBLISH_ARTIFACTS_ON_CURRENT_BRANCH', value: true)
+                            ]
+                    env.PRESTO_BUILD_VERSION = downstream.buildVariables.PRESTO_BUILD_VERSION
+                    env.DOCKER_IMAGE = downstream.buildVariables.DOCKER_IMAGE
+                }
+            }
+        }
+
+        stage ('Push Docker Images') {
+            environment {
+                DOCKERHUB_PRESTODB_CREDS = credentials('docker-hub-prestodb-push-token')
+            }
+            steps {
+                container('dind') {
+                    sh '''
+                        docker pull "${DOCKER_IMAGE}-amd64"
+                        docker pull "${DOCKER_IMAGE}-arm64"
+                        docker pull "${DOCKER_IMAGE}"
+                        docker tag "${DOCKER_IMAGE}-amd64" "${DOCKER_PUBLIC}/presto:${PRESTO_EDGE_RELEASE_VERSION}-amd64"
+                        docker tag "${DOCKER_IMAGE}-arm64" "${DOCKER_PUBLIC}/presto:${PRESTO_EDGE_RELEASE_VERSION}-arm64"
+                        docker tag "${DOCKER_IMAGE}"       "${DOCKER_PUBLIC}/presto:${PRESTO_EDGE_RELEASE_VERSION}"
+                        docker image ls
+                        echo ${DOCKERHUB_PRESTODB_CREDS_PSW} | docker login --username ${DOCKERHUB_PRESTODB_CREDS_USR} --password-stdin
+                        docker push ${DOCKER_PUBLIC}/presto:${PRESTO_EDGE_RELEASE_VERSION}-amd64
+                        docker push ${DOCKER_PUBLIC}/presto:${PRESTO_EDGE_RELEASE_VERSION}-arm64
+                        docker push ${DOCKER_PUBLIC}/presto:${PRESTO_EDGE_RELEASE_VERSION}
+                    '''
+                }
+            }
+        }
+
+        stage ('Upload Release Packages') {
+            steps {
+                withCredentials([[
+                        $class: 'AmazonWebServicesCredentialsBinding',
+                        credentialsId: "${AWS_CREDENTIAL_ID}",
+                        accessKeyVariable: 'AWS_ACCESS_KEY_ID',
+                        secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
+                    sh '''
+                        aws s3 ls "s3://oss-prestodb/presto/${PRESTO_BUILD_VERSION}/"
+                        aws s3 cp "s3://oss-prestodb/presto/${PRESTO_BUILD_VERSION}/" "${AWS_S3_PREFIX}/${PRESTO_EDGE_RELEASE_VERSION}/" --recursive --no-progress
                     '''
                 }
             }
@@ -231,7 +175,17 @@ pipeline {
                 build job: '/oss-presto-pipelines/oss-release/dvt-prestodb-benchto',
                     wait: false,
                     parameters: [
-                        string(name: 'PRESTO_BRANCH', value: "release-" + env.PRESTO_EDGE_RELEASE_VERSION)
+                        string(name: 'PRESTO_BRANCH',       value:  env.EDGE_BRANCH),
+                        string(name: 'PRESTO_CLUSTER_SIZE', value:  'small'),
+                        string(name: 'BENCHTO_WORKLOAD',    value:  'tpch')
+                    ]
+
+                build job: '/oss-presto-pipelines/oss-release/dvt-prestodb-benchto',
+                    wait: false,
+                    parameters: [
+                        string(name: 'PRESTO_BRANCH',       value:  env.EDGE_BRANCH),
+                        string(name: 'PRESTO_CLUSTER_SIZE', value:  'small'),
+                        string(name: 'BENCHTO_WORKLOAD',    value:  'tpcds')
                     ]
             }
         }

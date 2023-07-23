@@ -8,7 +8,7 @@ spec:
   serviceAccountName: oss-agent
   containers:
   - name: maven
-    image: maven:3.8.6-openjdk-8-slim
+    image: public.ecr.aws/oss-presto/agent-maven-jdk11:20230724Hfea798c
     tty: true
     resources:
       requests:
@@ -22,7 +22,7 @@ spec:
   - name: dind
     image: docker:20.10.16-dind-alpine3.15
     securityContext:
-        privileged: true
+      privileged: true
     tty: true
     resources:
       requests:
