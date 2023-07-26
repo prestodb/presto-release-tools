@@ -170,7 +170,19 @@ pipeline {
             }
         }
 
-        stage ('Run Benchto') {
+        stage ('Run TPC-H SF1') {
+            steps {
+                build job: '/oss-presto-pipelines/oss-release/dvt-prestodb-benchto',
+                    wait: true,
+                    parameters: [
+                        string(name: 'PRESTO_BRANCH',       value:  env.EDGE_BRANCH),
+                        string(name: 'PRESTO_CLUSTER_SIZE', value:  'tiny'),
+                        string(name: 'BENCHTO_WORKLOAD',    value:  'tpch')
+                    ]
+            }
+        }
+
+        stage ('Run TPC-H/DS SF100') {
             steps {
                 build job: '/oss-presto-pipelines/oss-release/dvt-prestodb-benchto',
                     wait: false,
