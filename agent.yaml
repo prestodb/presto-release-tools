@@ -7,18 +7,6 @@ spec:
     eks.amazonaws.com/nodegroup: eks-oss-presto-dynamic-managed-ng
   serviceAccountName: oss-agent
   containers:
-  - name: maven
-    image: public.ecr.aws/oss-presto/agent-maven-jdk11:20230724Hfea798c
-    tty: true
-    resources:
-      requests:
-        memory: "2Gi"
-        cpu: "1000m"
-      limits:
-        memory: "6Gi"
-        cpu: "2000m"
-    command:
-    - cat
   - name: dind
     image: docker:20.10.16-dind-alpine3.15
     securityContext:
@@ -29,5 +17,5 @@ spec:
         memory: "2Gi"
         cpu: "1000m"
       limits:
-        memory: "4Gi"
-        cpu: "2000m"
+        memory: "2Gi"
+        cpu: "1000m"
