@@ -30,7 +30,7 @@ pipeline {
                description: 'usually the stable release branch name, like <pre>release-0.280</pre>')
         string(name: 'PRESTO_RELEASE_VERSION',
                defaultValue: '',
-               description: 'usually a stable release version, like <pre>0.280</pre>')
+               description: 'usually a stable release version, also a git tag, like <pre>0.280</pre>')
     }
 
     stages {
