@@ -143,7 +143,7 @@ pipeline {
 
                         git status
                         git commit -m "Add ${VERSION_TO_BE_RELEASED} docs"
-                        git checkout -b "relase-${VERSION_TO_BE_RELEASED}-docs"
+                        git checkout -b "${VERSION_TO_BE_RELEASED}-docs"
                         git push --set-upstream ${ORIGIN} relase-${VERSION_TO_BE_RELEASED}-docs
                     '''
                 }
