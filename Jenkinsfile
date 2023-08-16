@@ -143,6 +143,7 @@ pipeline {
 
                         git status
                         git commit -m "Add ${VERSION_TO_BE_RELEASED} docs"
+                        git rebase ${ORIGIN} source
                         git push --set-upstream ${ORIGIN} source
                     '''
                 }
