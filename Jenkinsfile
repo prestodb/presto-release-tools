@@ -172,7 +172,7 @@ pipeline {
 
         stage ('Run TPC-H SF1') {
             steps {
-                build job: '/oss-presto-pipelines/oss-release/dvt-prestodb-benchto',
+                build job: '/engineering-productivity/engineering-productivity/dvt-prestodb-benchto',
                     wait: true,
                     parameters: [
                         string(name: 'PRESTO_BRANCH',       value:  env.EDGE_BRANCH),
@@ -184,7 +184,7 @@ pipeline {
 
         stage ('Run TPC-H/DS SF100') {
             steps {
-                build job: '/oss-presto-pipelines/oss-release/dvt-prestodb-benchto',
+                build job: '/engineering-productivity/engineering-productivity/dvt-prestodb-benchto',
                     wait: false,
                     parameters: [
                         string(name: 'PRESTO_BRANCH',       value:  env.EDGE_BRANCH),
@@ -192,7 +192,7 @@ pipeline {
                         string(name: 'BENCHTO_WORKLOAD',    value:  'tpch')
                     ]
 
-                build job: '/oss-presto-pipelines/oss-release/dvt-prestodb-benchto',
+                build job: 'engineering-productivity/engineering-productivity/dvt-prestodb-benchto',
                     wait: false,
                     parameters: [
                         string(name: 'PRESTO_BRANCH',       value:  env.EDGE_BRANCH),
