@@ -67,7 +67,7 @@ pipeline {
             steps {
                 sh '''
                     cd presto
-                    EDGE_N=$(git branch -r | grep "release-${PRESTO_STABLE_RELEASE_VERSION}-edge[0-9]$" | wc -l)
+                    EDGE_N=$(git branch -r | grep "release-${PRESTO_STABLE_RELEASE_VERSION}-edge" | wc -l)
                     PRESTO_EDGE_RELEASE_VERSION="${PRESTO_STABLE_RELEASE_VERSION}-edge$((EDGE_N+1))"
                     echo "new presto edge release version: ${PRESTO_EDGE_RELEASE_VERSION}"
                     echo ${PRESTO_EDGE_RELEASE_VERSION} > PRESTO_EDGE_RELEASE_VERSION.version
