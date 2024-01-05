@@ -121,7 +121,7 @@ pipeline {
                 sh 'sleep 10'
                 script {
                     def downstream =
-                        build job: '/prestodb/presto/' + env.EDGE_BRANCH,
+                        build job: '/prestodb/presto/' + env.PRESTO_EDGE_RELEASE_VERSION,
                             wait: true,
                             parameters: [
                                 booleanParam(name: 'PUBLISH_ARTIFACTS_ON_CURRENT_BRANCH', value: true)
