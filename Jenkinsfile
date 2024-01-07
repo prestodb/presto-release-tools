@@ -139,8 +139,14 @@ pipeline {
             steps {
                 container('dind') {
                     sh '''
+                        apk add jq
                         docker buildx create --name="container" --driver=docker-container --bootstrap
                         echo ${DOCKERHUB_PRESTODB_CREDS_PSW} | docker login --username ${DOCKERHUB_PRESTODB_CREDS_USR} --password-stdin
+                        IMAGE_SHAS=$(docker buildx imagetools inspect --raw "${DOCKER_IMAGE}" | jq -r '.manifests.[].digest')
+                        ORG_IMG_NAME=${DOCKER_IMAGE%:*}
+                        for image_sha in "${IMAGE_SHAS}"; do
+                            docker buildx imagetools create --builder="container" -t "${DOCKER_PUBLIC}/presto@${image_sha}" "${ORG_IMG_NAME}@${image_sha}"
+                        done
                         docker buildx imagetools create --builder="container" -t "${DOCKER_PUBLIC}/presto:${PRESTO_EDGE_RELEASE_VERSION}" "${DOCKER_IMAGE}"
                     '''
                 }
