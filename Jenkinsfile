@@ -53,17 +53,9 @@ pipeline {
             steps {
                 container('dind') {
                     sh '''
-                        docker pull "${DOCKER_IMAGE}-amd64"
-                        docker pull "${DOCKER_IMAGE}-arm64"
-                        docker pull "${DOCKER_IMAGE}"
-                        docker tag "${DOCKER_IMAGE}-amd64" "${DOCKER_PUBLIC}/presto:${PRESTO_RELEASE_VERSION}-amd64"
-                        docker tag "${DOCKER_IMAGE}-arm64" "${DOCKER_PUBLIC}/presto:${PRESTO_RELEASE_VERSION}-arm64"
-                        docker tag "${DOCKER_IMAGE}"       "${DOCKER_PUBLIC}/presto:${PRESTO_RELEASE_VERSION}"
-                        docker image ls
+                        docker buildx create --name="container" --driver=docker-container --bootstrap
                         echo ${DOCKERHUB_PRESTODB_CREDS_PSW} | docker login --username ${DOCKERHUB_PRESTODB_CREDS_USR} --password-stdin
-                        docker push ${DOCKER_PUBLIC}/presto:${PRESTO_RELEASE_VERSION}-amd64
-                        docker push ${DOCKER_PUBLIC}/presto:${PRESTO_RELEASE_VERSION}-arm64
-                        docker push ${DOCKER_PUBLIC}/presto:${PRESTO_RELEASE_VERSION}
+                        docker buildx imagetools create --builder="container" -t ${DOCKER_PUBLIC}/presto:${PRESTO_RELEASE_VERSION} "${DOCKER_IMAGE}"
                     '''
                 }
             }
