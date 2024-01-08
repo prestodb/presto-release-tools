@@ -8,7 +8,7 @@ spec:
   serviceAccountName: oss-agent
   containers:
   - name: dind
-    image: docker:20.10.16-dind-alpine3.15
+    image: docker:24.0.7-dind-alpine3.19
     securityContext:
       privileged: true
     tty: true
