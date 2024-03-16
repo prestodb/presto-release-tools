@@ -36,7 +36,7 @@ pipeline {
     stages {
         stage('Setup') {
             steps {
-                sh 'apt update && apt install -y bash git gpg'
+                sh 'apt update && apt install -y bash build-essential git gpg python3 python3-venv'
             }
         }
 
@@ -101,7 +101,7 @@ pipeline {
                         -DstagingProgressTimeoutMinutes=60 \
                         -Poss-release \
                         -Pdeploy-to-ossrh \
-                        -pl '!presto-test-coverage,!presto-native-execution'
+                        -pl '!presto-test-coverage,!presto-native-execution,!redis-hbo-provider'
                 '''
             }
         }
