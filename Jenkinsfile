@@ -101,7 +101,7 @@ pipeline {
                         -DstagingProgressTimeoutMinutes=60 \
                         -Poss-release \
                         -Pdeploy-to-ossrh \
-                        -pl '!presto-open-telemetry,!presto-docs,!presto-test-coverage,!presto-native-execution'
+                        -pl '!presto-test-coverage,!presto-native-execution'
                 '''
             }
         }
