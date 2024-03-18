@@ -56,6 +56,7 @@ pipeline {
                         docker buildx create --name="container" --driver=docker-container --bootstrap
                         echo ${DOCKERHUB_PRESTODB_CREDS_PSW} | docker login --username ${DOCKERHUB_PRESTODB_CREDS_USR} --password-stdin
                         docker buildx imagetools create --builder="container" -t ${DOCKER_PUBLIC}/presto:${PRESTO_RELEASE_VERSION} "${DOCKER_IMAGE}"
+                        docker buildx imagetools create --builder="container" -t ${DOCKER_PUBLIC}/presto:latest "${DOCKER_IMAGE}"
                     '''
                 }
             }
