@@ -232,17 +232,17 @@ public class GenerateReleaseNotesTask
 
                 case EXPECT_LINE:
                     if (line.isEmpty()) {
-                        releaseNoteItems.add(new ReleaseNoteItem(section, currentNote.toString()));
+                        releaseNoteItems.add(new ReleaseNoteItem(pullRequest, section, currentNote.toString()));
                         status = EXPECT_SECTION_HEADER;
                     }
                     else if (line.startsWith("*")) {
-                        releaseNoteItems.add(new ReleaseNoteItem(section, currentNote.toString()));
+                        releaseNoteItems.add(new ReleaseNoteItem(pullRequest, section, currentNote.toString()));
                         currentNote = new StringBuilder(line.substring(2).trim());
                     }
                     else {
                         Optional<String> possibleSection = extractSection(line);
                         if (possibleSection.isPresent()) {
-                            releaseNoteItems.add(new ReleaseNoteItem(section, currentNote.toString()));
+                            releaseNoteItems.add(new ReleaseNoteItem(pullRequest, section, currentNote.toString()));
                             section = possibleSection.get();
                             status = EXPECT_DASHES_OR_RELEASE_NOTE;
                         }
@@ -297,7 +297,7 @@ public class GenerateReleaseNotesTask
             List<ReleaseNoteItem> items = new ArrayList<>(releaseNotesByCategory.get(category));
             sort(items, new ReleaseNoteItemComparator());
             for (ReleaseNoteItem item : items) {
-                document.append("\n").append(item.getFormatted("*", 0));
+                document.append("\n").append(item.getFormatted("*", 0)).append(format(" (`#%1$d <https://github.com/prestodb/presto/pull/%1$d>`_)", item.pullRequest.getId()));
             }
             document.append("\n\n");
         }
@@ -444,12 +444,14 @@ public class GenerateReleaseNotesTask
 
         private final String section;
         private final String line;
+        private final PullRequest pullRequest;
 
-        public ReleaseNoteItem(String section, String line)
+        public ReleaseNoteItem(PullRequest pullRequest, String section, String line)
         {
             this.section = formatCategory(requireNonNull(section, "section is null"));
             checkArgument(!Strings.isNullOrEmpty(line), "line is null or empty");
             this.line = toUpperCase(line.charAt(0)) + line.substring(1);
+            this.pullRequest = requireNonNull(pullRequest, "pull request is null");
         }
 
         public String getSection()
