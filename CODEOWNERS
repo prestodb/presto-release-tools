@@ -1,0 +1,12 @@
+#####################################################################
+### presto-release-tools code owners                              ###
+#####################################################################
+
+#####################################################################
+# Fallback to committers group for areas that do not have code owners
+/** @prestodb/committers
+
+# TSC may approve changes to this list
+CODEOWNERS @prestodb/team-tsc
+
+#####################################################################
