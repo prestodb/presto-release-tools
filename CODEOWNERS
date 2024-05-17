@@ -4,9 +4,8 @@
 
 #####################################################################
 # Fallback to committers group for areas that do not have code owners
-/** @prestodb/committers
+/** @prestodb/committers @prestodb/team-releases
 
 # TSC may approve changes to this list
-CODEOWNERS @prestodb/team-tsc
-
+CODEOWNERS @prestodb/team-tsc 
 #####################################################################
