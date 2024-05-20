@@ -16,7 +16,7 @@ pipeline {
         disableConcurrentBuilds()
         disableResume()
         overrideIndexTriggers(false)
-        timeout(time: 2, unit: 'HOURS')
+        timeout(time: 4, unit: 'HOURS')
         timestamps()
     }
 
