@@ -7,7 +7,7 @@ AGENT_YAML = '''
       serviceAccountName: oss-agent
       containers:
       - name: dind
-        image: docker:24.0.7-dind-alpine3.19
+        image: docker:26.1.4-dind-alpine3.20
         securityContext:
           privileged: true
         tty: true
@@ -77,10 +77,9 @@ pipeline {
             steps {
                 container('dind') {
                     sh '''
-                        docker buildx create --name="container" --driver=docker-container --bootstrap
                         echo ${DOCKERHUB_PRESTODB_CREDS_PSW} | docker login --username ${DOCKERHUB_PRESTODB_CREDS_USR} --password-stdin
-                        docker buildx imagetools create --builder container --progress tty -t ${DOCKER_PUBLIC}/presto:${PRESTO_RELEASE_VERSION} "${DOCKER_IMAGE}"
-                        docker buildx imagetools create --builder container --progress tty -t ${DOCKER_PUBLIC}/presto:latest "${DOCKER_IMAGE}"
+                        docker buildx imagetools create --progress plain -t ${DOCKER_PUBLIC}/presto:${PRESTO_RELEASE_VERSION} "${DOCKER_IMAGE}"
+                        docker buildx imagetools create --progress plain -t ${DOCKER_PUBLIC}/presto:latest "${DOCKER_IMAGE}"
 
                         docker pull ${NATIVE_DOCKER_IMAGE}
                         docker tag ${NATIVE_DOCKER_IMAGE} ${DOCKER_PUBLIC}/presto-native:${PRESTO_RELEASE_VERSION}
