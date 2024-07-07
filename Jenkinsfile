@@ -1,9 +1,31 @@
+AGENT_YAML = '''
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      namespace: oss-agent
+    spec:
+      serviceAccountName: oss-agent
+      containers:
+      - name: dind
+        image: docker:24.0.7-dind-alpine3.19
+        securityContext:
+          privileged: true
+        tty: true
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1000m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+'''
+
 pipeline {
 
     agent {
         kubernetes {
             defaultContainer 'dind'
-            yamlFile 'agent.yaml'
+            yaml AGENT_YAML
         }
     }
 
@@ -42,6 +64,7 @@ pipeline {
                             ]
                     env.PRESTO_BUILD_VERSION = downstream.buildVariables.PRESTO_BUILD_VERSION
                     env.DOCKER_IMAGE = downstream.buildVariables.DOCKER_IMAGE
+                    env.NATIVE_DOCKER_IMAGE = downstream.buildVariables.NATIVE_DOCKER_IMAGE
                 }
             }
         }
@@ -57,6 +80,12 @@ pipeline {
                         echo ${DOCKERHUB_PRESTODB_CREDS_PSW} | docker login --username ${DOCKERHUB_PRESTODB_CREDS_USR} --password-stdin
                         docker buildx imagetools create --builder container --progress tty -t ${DOCKER_PUBLIC}/presto:${PRESTO_RELEASE_VERSION} "${DOCKER_IMAGE}"
                         docker buildx imagetools create --builder container --progress tty -t ${DOCKER_PUBLIC}/presto:latest "${DOCKER_IMAGE}"
+
+                        docker pull ${NATIVE_DOCKER_IMAGE}
+                        docker tag ${NATIVE_DOCKER_IMAGE} ${DOCKER_PUBLIC}/presto-native:${PRESTO_RELEASE_VERSION}
+                        docker tag ${NATIVE_DOCKER_IMAGE} ${DOCKER_PUBLIC}/presto-native:latest
+                        docker push ${DOCKER_PUBLIC}/presto-native:${PRESTO_RELEASE_VERSION}
+                        docker push ${DOCKER_PUBLIC}/presto-native:latest
                     '''
                 }
             }
