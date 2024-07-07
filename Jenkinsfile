@@ -1,9 +1,31 @@
+AGENT_YAML = '''
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      namespace: oss-agent
+    spec:
+      serviceAccountName: oss-agent
+      containers:
+      - name: maven
+        image: maven:3.8.6-openjdk-8-slim
+        tty: true
+        resources:
+          requests:
+            memory: "8Gi"
+            cpu: "4000m"
+          limits:
+            memory: "8Gi"
+            cpu: "4000m"
+        command:
+        - cat
+'''
+
 pipeline {
 
     agent {
         kubernetes {
             defaultContainer 'maven'
-            yamlFile 'agent.yaml'
+            yaml AGENT_YAML
         }
     }
 
@@ -90,7 +112,7 @@ pipeline {
                     export GPG_TTY=${TTY}
 
                     cd presto
-                    mvn -s ${WORKSPACE}/settings.xml -V -B -U -e -T2C clean deploy \
+                    unset MAVEN_CONFIG && ./mvnw -s ${WORKSPACE}/settings.xml -V -B -U -e -T2C clean deploy \
                         -Dgpg.passphrase=${GPG_PASSPHRASE} \
                         -Dmaven.wagon.http.retryHandler.count=8 \
                         -DskipTests \
@@ -101,6 +123,7 @@ pipeline {
                         -DstagingProgressTimeoutMinutes=60 \
                         -Poss-release \
                         -Pdeploy-to-ossrh \
+                        -P '!ui' \
                         -pl '!presto-test-coverage,!presto-native-execution'
                 '''
             }
