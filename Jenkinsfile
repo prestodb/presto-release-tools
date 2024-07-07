@@ -105,14 +105,11 @@ pipeline {
                 retry(3)
             }
             steps {
-                echo 'release all jars and the server tarball to Maven Central'
-                input('Do you want to proceed?')
-
                 sh '''#!/bin/bash -ex
                     export GPG_TTY=${TTY}
 
                     cd presto
-                    unset MAVEN_CONFIG && ./mvnw -s ${WORKSPACE}/settings.xml -V -B -U -e -T2C clean deploy \
+                    unset MAVEN_CONFIG && ./mvnw -s ${WORKSPACE}/settings.xml -V -B -U -e -T2C deploy \
                         -Dgpg.passphrase=${GPG_PASSPHRASE} \
                         -Dmaven.wagon.http.retryHandler.count=8 \
                         -DskipTests \
