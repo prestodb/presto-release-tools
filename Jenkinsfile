@@ -60,7 +60,8 @@ pipeline {
                         build job: '/prestodb/presto/' + env.PRESTO_RELEASE_VERSION,
                             wait: true,
                             parameters: [
-                                booleanParam(name: 'PUBLISH_ARTIFACTS_ON_CURRENT_BRANCH', value: true)
+                                booleanParam(name: 'PUBLISH_ARTIFACTS_ON_CURRENT_BRANCH', value: true),
+                                booleanParam(name: 'BUILD_PRESTISSIMO_DEPENDENCY',        value: false)
                             ]
                     env.PRESTO_BUILD_VERSION = downstream.buildVariables.PRESTO_BUILD_VERSION
                     env.DOCKER_IMAGE = downstream.buildVariables.DOCKER_IMAGE
