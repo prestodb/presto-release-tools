@@ -1,9 +1,43 @@
+AGENT_YAML = '''
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      namespace: jenkins-agent
+    spec:
+      serviceAccountName: jenkins-agent
+      containers:
+      - name: maven
+        image: public.ecr.aws/oss-presto/agent-maven-jdk11:20230724Hfea798c
+        resources:
+          requests:
+            memory: "14Gi"
+            cpu: "3500m"
+          limits:
+            memory: "14Gi"
+            cpu: "3500m"
+        tty: true
+        command:
+        - cat
+      - name: dind
+        image: docker:24.0.7-dind-alpine3.19
+        securityContext:
+          privileged: true
+        tty: true
+        resources:
+          requests:
+            memory: "4Gi"
+            cpu: "2000m"
+          limits:
+            memory: "4Gi"
+            cpu: "2000m"
+'''
+
 pipeline {
 
     agent {
         kubernetes {
             defaultContainer 'maven'
-            yamlFile 'agent.yaml'
+            yaml AGENT_YAML
         }
     }
 
@@ -11,7 +45,7 @@ pipeline {
         AWS_CREDENTIAL_ID  = 'aws-jenkins'
         AWS_S3_PREFIX      = 's3://oss-presto-release/presto'
         DOCKER_PUBLIC      = 'docker.io/prestodb'
-        GITHUB_TOKEN_ID    = 'github-token-presto-release-bot'
+        GITHUB_TOKEN_ID    = 'github-prestodb-token'
     }
 
     options {
@@ -121,7 +155,7 @@ pipeline {
                 sh 'sleep 10'
                 script {
                     def downstream =
-                        build job: '/prestodb/presto/' + env.PRESTO_EDGE_RELEASE_VERSION,
+                        build job: '/prestodb/presto/' + env.EDGE_BRANCH,
                             wait: true,
                             parameters: [
                                 booleanParam(name: 'PUBLISH_ARTIFACTS_ON_CURRENT_BRANCH', value: true)
@@ -165,38 +199,6 @@ pipeline {
                         aws s3 cp "s3://oss-prestodb/presto/${PRESTO_BUILD_VERSION}/" "${AWS_S3_PREFIX}/${PRESTO_EDGE_RELEASE_VERSION}/" --recursive --no-progress
                     '''
                 }
-            }
-        }
-
-        stage ('Run TPC-H SF1') {
-            steps {
-                build job: '/engineering-productivity/engineering-productivity/dvt-prestodb-benchto',
-                    wait: true,
-                    parameters: [
-                        string(name: 'PRESTO_BRANCH',       value:  env.EDGE_BRANCH),
-                        string(name: 'PRESTO_CLUSTER_SIZE', value:  'tiny'),
-                        string(name: 'BENCHTO_WORKLOAD',    value:  'tpch')
-                    ]
-            }
-        }
-
-        stage ('Run TPC-H/DS SF100') {
-            steps {
-                build job: '/engineering-productivity/engineering-productivity/dvt-prestodb-benchto',
-                    wait: false,
-                    parameters: [
-                        string(name: 'PRESTO_BRANCH',       value:  env.EDGE_BRANCH),
-                        string(name: 'PRESTO_CLUSTER_SIZE', value:  'small'),
-                        string(name: 'BENCHTO_WORKLOAD',    value:  'tpch')
-                    ]
-
-                build job: 'engineering-productivity/engineering-productivity/dvt-prestodb-benchto',
-                    wait: false,
-                    parameters: [
-                        string(name: 'PRESTO_BRANCH',       value:  env.EDGE_BRANCH),
-                        string(name: 'PRESTO_CLUSTER_SIZE', value:  'small'),
-                        string(name: 'BENCHTO_WORKLOAD',    value:  'tpcds')
-                    ]
             }
         }
     }
