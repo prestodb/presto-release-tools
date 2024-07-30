@@ -120,7 +120,6 @@ pipeline {
                         -DstagingProgressTimeoutMinutes=60 \
                         -Poss-release \
                         -Pdeploy-to-ossrh \
-                        -P '!ui' \
                         -pl '!presto-test-coverage,!presto-native-execution'
                 '''
             }
