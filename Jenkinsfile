@@ -2,9 +2,9 @@ AGENT_YAML = '''
     apiVersion: v1
     kind: Pod
     metadata:
-      namespace: jenkins-agent
+      namespace: oss-agent
     spec:
-      serviceAccountName: jenkins-agent
+      serviceAccountName: oss-agent
       containers:
       - name: maven
         image: public.ecr.aws/oss-presto/agent-maven-jdk11:20230724Hfea798c
