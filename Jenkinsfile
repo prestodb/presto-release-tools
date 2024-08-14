@@ -45,7 +45,7 @@ pipeline {
         AWS_CREDENTIAL_ID  = 'aws-jenkins'
         AWS_S3_PREFIX      = 's3://oss-presto-release/presto'
         DOCKER_PUBLIC      = 'docker.io/prestodb'
-        GITHUB_TOKEN_ID    = 'github-prestodb-token'
+        GITHUB_TOKEN_ID    = 'github-token-presto-release-bot'
     }
 
     options {
