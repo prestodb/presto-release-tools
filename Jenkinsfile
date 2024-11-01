@@ -1,9 +1,33 @@
+AGENT_YAML = '''
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      namespace: oss-agent
+    spec:
+      nodeSelector:
+        eks.amazonaws.com/nodegroup: eks-oss-presto-dynamic-managed-ng
+      serviceAccountName: oss-agent
+      containers:
+      - name: maven
+        image: maven:3.8.6-openjdk-8-slim
+        tty: true
+        resources:
+          requests:
+            memory: "6Gi"
+            cpu: "2000m"
+          limits:
+            memory: "6Gi"
+            cpu: "2000m"
+        command:
+        - cat
+'''
+
 pipeline {
 
     agent {
         kubernetes {
             defaultContainer 'maven'
-            yamlFile 'agent.yaml'
+            yaml AGENT_YAML
         }
     }
 
