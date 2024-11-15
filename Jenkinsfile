@@ -109,7 +109,7 @@ pipeline {
                     export GPG_TTY=${TTY}
 
                     cd presto
-                    unset MAVEN_CONFIG && ./mvnw -s ${WORKSPACE}/settings.xml -V -B -U -e -T2C deploy \
+                    unset MAVEN_CONFIG && ./mvnw -s ${WORKSPACE}/settings.xml -V -B -U -e -T1C deploy \
                         -Dgpg.passphrase=${GPG_PASSPHRASE} \
                         -Dmaven.wagon.http.retryHandler.count=8 \
                         -DskipTests \
@@ -120,7 +120,7 @@ pipeline {
                         -DstagingProgressTimeoutMinutes=60 \
                         -Poss-release \
                         -Pdeploy-to-ossrh \
-                        -pl '!presto-test-coverage,!presto-native-execution,!presto-native-sidecar-plugin'
+                        -pl '!presto-test-coverage'
                 '''
             }
         }
