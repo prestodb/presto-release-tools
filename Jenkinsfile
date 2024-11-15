@@ -109,7 +109,7 @@ pipeline {
                     export GPG_TTY=${TTY}
 
                     cd presto
-                    unset MAVEN_CONFIG && ./mvnw -s ${WORKSPACE}/settings.xml -V -B -U -e deploy \
+                    unset MAVEN_CONFIG && ./mvnw -s ${WORKSPACE}/settings.xml -V -B -U -e -T1C deploy \
                         -Dgpg.passphrase=${GPG_PASSPHRASE} \
                         -Dmaven.wagon.http.retryHandler.count=8 \
                         -DskipTests \
