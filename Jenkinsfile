@@ -1,10 +1,7 @@
 AGENT_YAML = '''
     apiVersion: v1
     kind: Pod
-    metadata:
-      namespace: oss-agent
     spec:
-      serviceAccountName: oss-agent
       containers:
       - name: maven
         image: maven:3.8.6-openjdk-8-slim
