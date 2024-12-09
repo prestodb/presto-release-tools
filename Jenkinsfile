@@ -1,10 +1,7 @@
 AGENT_YAML = '''
     apiVersion: v1
     kind: Pod
-    metadata:
-      namespace: oss-agent
     spec:
-      serviceAccountName: oss-agent
       containers:
       - name: dind
         image: docker:26.1.4-dind-alpine3.20
