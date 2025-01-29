@@ -20,6 +20,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.exc.MismatchedInputException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
@@ -54,7 +55,7 @@ public class GithubGraphQlAction
             "        ref(qualifiedName: \"%s\") {\n" +
             "            target {\n" +
             "                ... on Commit {\n" +
-            "                    history(first: 100, after: %s) {\n" +
+            "                    history(first: 30, after: %s) {\n" +
             "                        pageInfo {\n" +
             "                            hasNextPage\n" +
             "                            endCursor\n" +
@@ -193,6 +194,22 @@ public class GithubGraphQlAction
 
         try {
             return new ObjectMapper().readValue(body, typeReference);
+        }
+        catch (MismatchedInputException e) {
+            try {
+                Map<String, Object> resp = new ObjectMapper().readValue(body, new TypeReference<Map<String, Object>>() {});
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> errors = resp.get("errors") == null ? null : (List<Map<String, Object>>) resp.get("errors");
+                if (errors != null) {
+                    throw new RuntimeException("GraphQL error: " + errors);
+                }
+                else {
+                    throw new RuntimeException(e);
+                }
+            }
+            catch (IOException errorInner) {
+                throw new RuntimeException(errorInner);
+            }
         }
         catch (IOException e) {
             throw new RuntimeException(e);
