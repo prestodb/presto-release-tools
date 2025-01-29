@@ -297,7 +297,7 @@ public class GenerateReleaseNotesTask
             List<ReleaseNoteItem> items = new ArrayList<>(releaseNotesByCategory.get(category));
             sort(items, new ReleaseNoteItemComparator());
             for (ReleaseNoteItem item : items) {
-                document.append("\n").append(item.getFormatted("*", 0)).append(format(" (`#%1$d <https://github.com/prestodb/presto/pull/%1$d>`_)", item.pullRequest.getId()));
+                document.append("\n").append(item.getFormatted("*", 0)).append(format(" `#%1$d <https://github.com/prestodb/presto/pull/%1$d>`_", item.pullRequest.getId()));
             }
             document.append("\n\n");
         }
