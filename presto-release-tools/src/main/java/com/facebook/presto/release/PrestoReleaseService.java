@@ -18,6 +18,7 @@ import com.facebook.presto.release.tasks.FinalizeReleaseCommand;
 import com.facebook.presto.release.tasks.GenerateReleaseNotesCommand;
 import io.airlift.airline.Cli;
 import io.airlift.airline.Help;
+import org.eclipse.jetty.util.ssl.SslContextFactory;
 
 public class PrestoReleaseService
 {
@@ -27,6 +28,8 @@ public class PrestoReleaseService
 
     public static void main(String[] args)
     {
+        SslContextFactory sslContextFactory = new SslContextFactory();
+        sslContextFactory.setExcludeProtocols("TLSv1.3");
         Cli<Runnable> parser = Cli.<Runnable>builder("release")
                 .withDescription("Presto Release")
                 .withDefaultCommand(Help.class)
