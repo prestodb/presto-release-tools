@@ -40,6 +40,7 @@
         <air.checkstyle.config-file>src/checkstyle/presto-checks.xml</air.checkstyle.config-file>
         <air.javadoc.lint>-missing</air.javadoc.lint>
 
+        <dep.jetty-utils.version>9.4.14.v20181114</dep.jetty-utils.version>
         <dep.airlift.version>0.188</dep.airlift.version>
         <dep.packaging.version>${dep.airlift.version}</dep.packaging.version>
         <dep.testng.version>6.10</dep.testng.version>
@@ -52,6 +53,12 @@
 
     <dependencyManagement>
         <dependencies>
+            <dependency>
+                <groupId>org.eclipse.jetty</groupId>
+                <artifactId>jetty-util</artifactId>
+                <version>${dep.jetty-utils.version}</version>
+            </dependency>
+
             <dependency>
                 <groupId>com.facebook.airlift</groupId>
                 <artifactId>bootstrap</artifactId>
