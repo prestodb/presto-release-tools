@@ -1,0 +1,83 @@
+name: Publish release
+
+on:
+  workflow_dispatch:
+
+jobs:
+  publish-release:
+    runs-on: ubuntu-latest
+    environment: release
+    strategy:
+      fail-fast: true
+    permissions:
+      contents: write
+      packages: write
+
+    steps:
+      - name: Check branch
+        if: ${{ github.ref != 'refs/heads/master' }}
+        run: echo "Invalid branch. This action can only be run on the master branch." && exit 1
+
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PRESTODB_CI_TOKEN }}
+          show-progress: false
+          fetch-depth: 0
+          ref: master
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: 8
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Configure Maven settings.xml
+        run: |
+          mkdir -p ~/.m2
+          echo '<settings>' > ~/.m2/settings.xml
+          echo '  <servers>' >> ~/.m2/settings.xml
+          echo '    <server>' >> ~/.m2/settings.xml
+          echo '      <id>ossrh</id>' >> ~/.m2/settings.xml
+          echo '      <username>${env.NEXUS_USERNAME}</username>' >> ~/.m2/settings.xml
+          echo '      <password>${env.NEXUS_PASSWORD}</password>' >> ~/.m2/settings.xml
+          echo '    </server>' >> ~/.m2/settings.xml
+          echo '  </servers>' >> ~/.m2/settings.xml
+          echo '</settings>' >> ~/.m2/settings.xml
+          cat ~/.m2/settings.xml
+
+      - name: Set up git
+        run: |
+          git config --global --add safe.directory ${{github.workspace}}
+          git config --global user.email "ci@lists.prestodb.io"
+          git config --global user.name "prestodb-ci"
+          git config pull.rebase false
+
+      - name: Set up GPG key
+        run: |
+          echo "${{ secrets.GPG_SECRET }}" > ${{ github.workspace }}/secret-key.gpg
+          chmod 600 ${{ github.workspace }}/secret-key.gpg
+          gpg --import --batch ${{ github.workspace }}/secret-key.gpg
+          rm -f ${{ github.workspace }}/secret-key.gpg
+          echo "allow-loopback-pinentry" > ~/.gnupg/gpg-agent.conf
+          echo "use-agent" > ~/.gnupg/gpg.conf
+          echo "pinentry-mode loopback" >> ~/.gnupg/gpg.conf
+          gpg-connect-agent reloadagent /bye
+
+      - name: Prepare release
+        run: |
+          mvn release:prepare
+
+      - name: Publish release
+        run: |
+          export GPG_TTY=$(tty)
+          export NEXUS_USERNAME=${{ secrets.NEXUS_USERNAME }}
+          export NEXUS_PASSWORD=${{ secrets.NEXUS_PASSWORD }}
+          export GPG_PASSPHRASE=${{ secrets.GPG_PASSPHRASE }}
+          mvn -Dgpg.useagent=true -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}" package gpg:sign
+          mvn release:perform
+
+      - name: Push changes and tags
+        run: |
+          git push origin master --tags
