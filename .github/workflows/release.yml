@@ -72,7 +72,7 @@ jobs:
       - name: Publish release
         run: |
           export GPG_TTY=$(tty)
-          export NEXUS_USERNAME=${{ vars.NEXUS_USERNAME }}
+          export NEXUS_USERNAME=${{ secrets.NEXUS_USERNAME }}
           export NEXUS_PASSWORD=${{ secrets.NEXUS_PASSWORD }}
           export GPG_PASSPHRASE=${{ secrets.GPG_PASSPHRASE }}
           mvn -Dgpg.useagent=true -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}" package gpg:sign
