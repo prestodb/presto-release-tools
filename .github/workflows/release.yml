@@ -76,7 +76,7 @@ jobs:
           export NEXUS_PASSWORD="${{ secrets.NEXUS_PASSWORD }}"
           export GPG_PASSPHRASE="${{ secrets.GPG_PASSPHRASE }}"
           mvn -Dgpg.useagent=true -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}" package gpg:sign
-          mvn release:perform
+          mvn deploy
 
       - name: Push changes and tags
         run: |
