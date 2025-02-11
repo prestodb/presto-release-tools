@@ -1,10 +1,7 @@
 AGENT_YAML = '''
     apiVersion: v1
     kind: Pod
-    metadata:
-      namespace: oss-agent
     spec:
-      serviceAccountName: oss-agent
       containers:
       - name: maven
         image: maven:3.8.6-openjdk-8-slim
@@ -30,7 +27,7 @@ pipeline {
     }
 
     environment {
-        GITHUB_TOKEN_ID = 'github-token-wanglinsong'
+        GITHUB_OSS_TOKEN_ID = 'github-token-presto-release-bot'
     }
 
     options {
@@ -92,7 +89,7 @@ pipeline {
                          ]],
                          submoduleCfg: [],
                          userRemoteConfigs: [[
-                             credentialsId: "${GITHUB_TOKEN_ID}",
+                             credentialsId: "${GITHUB_OSS_TOKEN_ID}",
                              url: 'https://github.com/wanglinsong/prestodb.github.io.git'
                          ]]
                 sh '''
@@ -156,7 +153,7 @@ pipeline {
             steps {
                 withCredentials([
                         usernamePassword(
-                            credentialsId: "${GITHUB_TOKEN_ID}",
+                            credentialsId: "${GITHUB_OSS_TOKEN_ID}",
                             passwordVariable: 'GIT_PASSWORD',
                             usernameVariable: 'GIT_USERNAME')]) {
                     sh '''
