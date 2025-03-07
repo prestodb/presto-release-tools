@@ -31,7 +31,7 @@ public class MockGithubAction
     }
 
     @Override
-    public List<Commit> listCommits(String latest, String earliest)
+    public List<Commit> listCommits(String repository, String latest, String earliest)
     {
         return commits;
     }

@@ -50,7 +50,7 @@ public class GithubGraphQlAction
 {
     private static final URI GRAPHQL_API_URI = URI.create("https://api.github.com/graphql");
     private static final String LIST_COMMITS_QUERY = "{\n" +
-            "    repository(owner: \"prestodb\", name: \"presto\") {\n" +
+            "    repository(owner: \"%s\", name: \"%s\") {\n" +
             "        ref(qualifiedName: \"%s\") {\n" +
             "            target {\n" +
             "                ... on Commit {\n" +
@@ -132,14 +132,19 @@ public class GithubGraphQlAction
     }
 
     @Override
-    public List<Commit> listCommits(String branch, String earliest)
+    public List<Commit> listCommits(String repository, String branch, String earliest)
     {
+        String[] parts = repository.split("/");
+        if (parts.length != 2) {
+            throw new IllegalArgumentException("Repository must be in format 'owner/name'");
+        }
+
         String current = null;
         ImmutableList.Builder<Commit> commits = ImmutableList.builder();
         TypeReference<Map<String, Map<String, Map<String, Map<String, Map<String, CommitHistory>>>>>> returnType = new TypeReference<Map<String, Map<String, Map<String, Map<String, Map<String, CommitHistory>>>>>>() {};
 
         while (true) {
-            CommitHistory history = githubApi(format(LIST_COMMITS_QUERY, branch, current == null ? "null" : format("\"%s\"", current)), Optional.empty(), returnType)
+            CommitHistory history = githubApi(format(LIST_COMMITS_QUERY, parts[0], parts[1], branch, current == null ? "null" : format("\"%s\"", current)), Optional.empty(), returnType)
                     .get("data")
                     .get("repository")
                     .get("ref")

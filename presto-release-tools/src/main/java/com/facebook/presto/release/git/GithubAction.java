@@ -20,7 +20,7 @@ public interface GithubAction
     /**
      * List commits starting from {@code earliest}, inclusive, on {@code branch}.
      */
-    List<Commit> listCommits(String branch, String earliest);
+    List<Commit> listCommits(String repository, String branch, String earliest);
 
     /**
      * Create a pull request to merge from headRef to baseRef

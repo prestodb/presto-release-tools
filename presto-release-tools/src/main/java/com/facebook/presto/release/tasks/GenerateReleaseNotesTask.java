@@ -112,6 +112,11 @@ public class GenerateReleaseNotesTask
         sanitizeRepository(git);
         MavenVersion version = this.version.orElseGet(() -> PrestoVersion.create(getVersionFromPom(repository.getDirectory())).getLastMajorVersion());
 
+        String upstreamName = repository.getUpstreamName();
+        String upstreamUrl = git.remoteUrl(upstreamName);
+        String upstreamRepo = GitRepository.getRepositoryFromUrl(upstreamUrl);
+        log.info("upstream url: %s, repo: %s", upstreamUrl, upstreamRepo);
+
         log.info("Release version: %s, Last Version: %s", version.getVersion(), version.getLastMajorVersion().getVersion());
         List<String> commitIds = Splitter.on("\n")
                 .trimResults()
@@ -119,15 +124,15 @@ public class GenerateReleaseNotesTask
                 .splitToList(git.log(
                         format(
                                 "%s/release-%s..%s/release-%s",
-                                repository.getUpstreamName(),
+                                upstreamName,
                                 version.getLastMajorVersion().getVersion(),
-                                repository.getUpstreamName(),
+                                upstreamName,
                                 version.getVersion()),
                         "--format=%H",
                         "--date-order"));
 
         log.info("Fetching Github commits");
-        List<Commit> commits = githubAction.listCommits("release-" + version.getVersion(), commitIds.get(commitIds.size() - 1));
+        List<Commit> commits = githubAction.listCommits(upstreamRepo, "release-" + version.getVersion(), commitIds.get(commitIds.size() - 1));
 
         log.info("Fetched %s commits", commits.size());
         commits = commits.stream()
@@ -171,11 +176,6 @@ public class GenerateReleaseNotesTask
         String releaseNotesBranch = "release-notes-" + version.getVersion();
         createReleaseNotesCommit(version.getVersion(), releaseNotesBranch, releaseNotes);
         git.push(ORIGIN, releaseNotesBranch, false);
-
-        String upstreamName = repository.getUpstreamName();
-        String upstreamUrl = git.remoteUrl(upstreamName);
-        String upstreamRepo = GitRepository.getRepositoryFromUrl(upstreamUrl);
-        log.info("upstream url: %s, repo: %s", upstreamUrl, upstreamRepo);
 
         String originName = repository.getOriginName();
         String originUrl = git.remoteUrl(originName);
