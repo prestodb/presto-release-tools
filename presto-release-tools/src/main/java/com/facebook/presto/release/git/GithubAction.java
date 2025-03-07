@@ -23,7 +23,7 @@ public interface GithubAction
     List<Commit> listCommits(String branch, String earliest);
 
     /**
-     * Create a pull request to merge from origin/branch to upstream/master.
+     * Create a pull request to merge from headRef to baseRef
      */
-    PullRequest createPullRequest(String branch, String title, String body);
+    PullRequest createPullRequest(String repository, String baseRef, String headRef, String title, String body);
 }

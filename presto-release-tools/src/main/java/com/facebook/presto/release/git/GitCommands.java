@@ -151,4 +151,10 @@ public class GitCommands
         }
         return sshKeyFile.map(s -> ImmutableMap.of("GIT_SSH_COMMAND", format("ssh -i %s", s))).orElseGet(ImmutableMap::of);
     }
+
+    @Override
+    public String remoteUrl(String remote)
+    {
+        return command("remote", "get-url", remote).trim();
+    }
 }

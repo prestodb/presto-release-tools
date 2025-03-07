@@ -172,7 +172,22 @@ public class GenerateReleaseNotesTask
         createReleaseNotesCommit(version.getVersion(), releaseNotesBranch, releaseNotes);
         git.push(ORIGIN, releaseNotesBranch, false);
 
-        PullRequest releaseNotesPullRequest = githubAction.createPullRequest(releaseNotesBranch, format("Add release notes for %s", version.getVersion()), releaseNotesSummary);
+        String upstreamName = repository.getUpstreamName();
+        String upstreamUrl = git.remoteUrl(upstreamName);
+        String upstreamRepo = GitRepository.getRepositoryFromUrl(upstreamUrl);
+        log.info("upstream url: %s, repo: %s", upstreamUrl, upstreamRepo);
+
+        String originName = repository.getOriginName();
+        String originUrl = git.remoteUrl(originName);
+        String originRepo = GitRepository.getRepositoryFromUrl(originUrl);
+        log.info("origin url: %s, repo: %s", originUrl, originRepo);
+
+        PullRequest releaseNotesPullRequest = githubAction.createPullRequest(
+                upstreamRepo,
+                "master",
+                format("%s:%s", originRepo.split("/")[0], releaseNotesBranch),
+                format("Add release notes for %s", version.getVersion()),
+                releaseNotesSummary);
         log.info("Release notes pull request created: %s", releaseNotesPullRequest.getUrl());
     }
 

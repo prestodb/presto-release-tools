@@ -37,7 +37,7 @@ public class MockGithubAction
     }
 
     @Override
-    public PullRequest createPullRequest(String branch, String title, String body)
+    public PullRequest createPullRequest(String repository, String baseRef, String headRef, String title, String body)
     {
         checkState(pullRequest == null, "Can only create one pull request");
         pullRequest = new PullRequest(0, title, "", body, new Actor("test"), null);

@@ -145,4 +145,16 @@ public class GitRepository
             checkArgument(directory.getName().equals(repositoryName), "Directory name [%s] mismatches repository name [%s]", directory.getName(), repositoryName);
         }
     }
+
+    public static String getRepositoryFromUrl(String repositoryUrl)
+    {
+        String repo;
+        if (repositoryUrl.startsWith("git")) {
+            repo = repositoryUrl.replaceAll("^[^:]+:", "");
+        }
+        else {
+            repo = repositoryUrl.replaceAll("^https?://[^/]+/", "");
+        }
+        return repo.replaceAll("\\.git$", "");
+    }
 }

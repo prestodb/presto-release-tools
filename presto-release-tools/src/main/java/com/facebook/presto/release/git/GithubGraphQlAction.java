@@ -49,7 +49,6 @@ public class GithubGraphQlAction
         implements GithubAction
 {
     private static final URI GRAPHQL_API_URI = URI.create("https://api.github.com/graphql");
-    private static final String PRESTO_REPOSITORY_ID = "MDEwOlJlcG9zaXRvcnk1MzQ5NTY1";
     private static final String LIST_COMMITS_QUERY = "{\n" +
             "    repository(owner: \"prestodb\", name: \"presto\") {\n" +
             "        ref(qualifiedName: \"%s\") {\n" +
@@ -112,6 +111,12 @@ public class GithubGraphQlAction
             "    }\n" +
             "}";
 
+    private static final String GET_REPOSITORY_ID_QUERY = "{\n" +
+            "    repository(owner: \"%s\", name: \"%s\") {\n" +
+            "        id\n" +
+            "    }\n" +
+            "}\n";
+
     private final HttpClient httpClient;
     private final String user;
     private final String accessToken;
@@ -154,12 +159,28 @@ public class GithubGraphQlAction
     }
 
     @Override
-    public PullRequest createPullRequest(String branch, String title, String body)
+    public PullRequest createPullRequest(String repository, String baseRef, String headRef, String title, String body)
     {
+        String[] parts = repository.split("/");
+        if (parts.length != 2) {
+            throw new IllegalArgumentException("Repository must be in format 'owner/name'");
+        }
+
+        TypeReference<Map<String, Map<String, Map<String, String>>>> repoIdType =
+                new TypeReference<Map<String, Map<String, Map<String, String>>>>() {};
+
+        String repoId = githubApi(
+                String.format(GET_REPOSITORY_ID_QUERY, parts[0], parts[1]),
+                Optional.empty(),
+                repoIdType)
+                .get("data")
+                .get("repository")
+                .get("id");
+
         Map<String, Object> pullRequestVariable = ImmutableMap.<String, Object>builder()
-                .put("repositoryId", PRESTO_REPOSITORY_ID)
-                .put("baseRefName", "master")
-                .put("headRefName", format("%s:%s", user, branch))
+                .put("repositoryId", repoId)
+                .put("baseRefName", baseRef)
+                .put("headRefName", headRef)
                 .put("clientMutationId", randomUUID())
                 .put("maintainerCanModify", false)
                 .put("title", title)
