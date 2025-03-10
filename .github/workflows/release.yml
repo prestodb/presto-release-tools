@@ -29,23 +29,14 @@ jobs:
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
-          java-version: 8
+          java-version: 11
           distribution: 'temurin'
-          cache: maven
-
-      - name: Configure Maven settings.xml
-        run: |
-          mkdir -p ~/.m2
-          echo '<settings>' > ~/.m2/settings.xml
-          echo '  <servers>' >> ~/.m2/settings.xml
-          echo '    <server>' >> ~/.m2/settings.xml
-          echo '      <id>ossrh</id>' >> ~/.m2/settings.xml
-          echo '      <username>${env.NEXUS_USERNAME}</username>' >> ~/.m2/settings.xml
-          echo '      <password>${env.NEXUS_PASSWORD}</password>' >> ~/.m2/settings.xml
-          echo '    </server>' >> ~/.m2/settings.xml
-          echo '  </servers>' >> ~/.m2/settings.xml
-          echo '</settings>' >> ~/.m2/settings.xml
-          cat ~/.m2/settings.xml
+          overwrite-settings: true
+          server-id: ossrh
+          server-username: NEXUS_USERNAME
+          server-password: NEXUS_PASSWORD
+          gpg-private-key: ${{ secrets.GPG_SECRET }}
+          gpg-passphrase: ${{ secrets.GPG_PASSPHRASE }}
 
       - name: Set up git
         run: |
@@ -54,30 +45,46 @@ jobs:
           git config --global user.name "prestodb-ci"
           git config pull.rebase false
 
-      - name: Set up GPG key
+      - name: Get release version
+        id: get-version
         run: |
-          echo "${{ secrets.GPG_SECRET }}" > ${{ github.workspace }}/secret-key.gpg
-          chmod 600 ${{ github.workspace }}/secret-key.gpg
-          gpg --import --batch ${{ github.workspace }}/secret-key.gpg
-          rm -f ${{ github.workspace }}/secret-key.gpg
-          echo "allow-loopback-pinentry" > ~/.gnupg/gpg-agent.conf
-          echo "use-agent" > ~/.gnupg/gpg.conf
-          echo "pinentry-mode loopback" >> ~/.gnupg/gpg.conf
-          gpg-connect-agent reloadagent /bye
+          RELEASE_VERSION=$(mvn org.apache.maven.plugins:maven-help-plugin:3.2.0:evaluate \
+            -Dexpression=project.version -q -ntp -DforceStdout | tail -n 1 | sed 's/-SNAPSHOT//')
+          echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
+          echo "RELEASE_VERSION=$RELEASE_VERSION"
+          echo "In case cut release failed, please delete the tag ${RELEASE_VERSION} manually"
 
       - name: Prepare release
         run: |
-          mvn release:prepare
+          git reset --hard
+          mvn release:prepare -DreleaseVersion=${{ env.RELEASE_VERSION }}
+          grep -m 1 "<version>" pom.xml
+          git log --pretty="format:%ce: %s" -5
+
+      - name: Set up GPG key
+        run: |
+          echo "${{ secrets.GPG_SECRET }}" > ${{ env.GPG_KEY_FILE }}
+          chmod 600 ${{ env.GPG_KEY_FILE }}
+          gpg --import --batch ${{ env.GPG_KEY_FILE }}
+          gpg --batch --yes --pinentry-mode loopback --passphrase "${{ secrets.GPG_PASSPHRASE }}" --sign ${{ env.GPG_KEY_FILE }}
+        env:
+          GPG_TTY: $(tty)
+          GPG_KEY_FILE: /tmp/gpg-key.txt
 
       - name: Publish release
         run: |
-          export GPG_TTY=$(tty)
-          export NEXUS_USERNAME="${{ secrets.NEXUS_USERNAME }}"
-          export NEXUS_PASSWORD="${{ secrets.NEXUS_PASSWORD }}"
-          export GPG_PASSPHRASE="${{ secrets.GPG_PASSPHRASE }}"
-          mvn -Dgpg.useagent=true -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}" package gpg:sign
-          mvn deploy
+          git checkout ${{ env.RELEASE_VERSION }}
+          git log --pretty="format:%ce: %s" -4
+          cat ~/.m2/settings.xml
+          cd presto-release-tools
+          mvn package gpg:sign deploy -Pdeploy-to-ossrh
+          cd ..
+        env:
+          NEXUS_USERNAME: "${{ secrets.NEXUS_USERNAME }}"
+          NEXUS_PASSWORD: "${{ secrets.NEXUS_PASSWORD }}"
 
       - name: Push changes and tags
         run: |
+          git checkout master
+          git log --pretty="format:%ce: %s" -5
           git push origin master --tags
