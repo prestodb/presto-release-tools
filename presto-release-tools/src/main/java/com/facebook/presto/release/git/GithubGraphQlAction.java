@@ -131,14 +131,19 @@ public class GithubGraphQlAction
         this.accessToken = requireNonNull(githubConfig.getAccessToken(), "accessToken is null");
     }
 
-    @Override
-    public List<Commit> listCommits(String repository, String branch, String earliest)
+    private String[] parseRepository(String repository)
     {
         String[] parts = repository.split("/");
         if (parts.length != 2) {
             throw new IllegalArgumentException("Repository must be in format 'owner/name'");
         }
+        return parts;
+    }
 
+    @Override
+    public List<Commit> listCommits(String repository, String branch, String earliest)
+    {
+        String[] parts = parseRepository(repository);
         String current = null;
         ImmutableList.Builder<Commit> commits = ImmutableList.builder();
         TypeReference<Map<String, Map<String, Map<String, Map<String, Map<String, CommitHistory>>>>>> returnType = new TypeReference<Map<String, Map<String, Map<String, Map<String, Map<String, CommitHistory>>>>>>() {};
@@ -166,11 +171,7 @@ public class GithubGraphQlAction
     @Override
     public PullRequest createPullRequest(String repository, String baseRef, String headRef, String title, String body)
     {
-        String[] parts = repository.split("/");
-        if (parts.length != 2) {
-            throw new IllegalArgumentException("Repository must be in format 'owner/name'");
-        }
-
+        String[] parts = parseRepository(repository);
         TypeReference<Map<String, Map<String, Map<String, String>>>> repoIdType =
                 new TypeReference<Map<String, Map<String, Map<String, String>>>>() {};
 
