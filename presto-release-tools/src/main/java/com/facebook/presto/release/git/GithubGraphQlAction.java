@@ -49,9 +49,8 @@ public class GithubGraphQlAction
         implements GithubAction
 {
     private static final URI GRAPHQL_API_URI = URI.create("https://api.github.com/graphql");
-    private static final String PRESTO_REPOSITORY_ID = "MDEwOlJlcG9zaXRvcnk1MzQ5NTY1";
     private static final String LIST_COMMITS_QUERY = "{\n" +
-            "    repository(owner: \"prestodb\", name: \"presto\") {\n" +
+            "    repository(owner: \"%s\", name: \"%s\") {\n" +
             "        ref(qualifiedName: \"%s\") {\n" +
             "            target {\n" +
             "                ... on Commit {\n" +
@@ -112,6 +111,12 @@ public class GithubGraphQlAction
             "    }\n" +
             "}";
 
+    private static final String GET_REPOSITORY_ID_QUERY = "{\n" +
+            "    repository(owner: \"%s\", name: \"%s\") {\n" +
+            "        id\n" +
+            "    }\n" +
+            "}\n";
+
     private final HttpClient httpClient;
     private final String user;
     private final String accessToken;
@@ -126,15 +131,25 @@ public class GithubGraphQlAction
         this.accessToken = requireNonNull(githubConfig.getAccessToken(), "accessToken is null");
     }
 
-    @Override
-    public List<Commit> listCommits(String branch, String earliest)
+    private String[] parseRepository(String repository)
     {
+        String[] parts = repository.split("/");
+        if (parts.length != 2) {
+            throw new IllegalArgumentException("Repository must be in format 'owner/name'");
+        }
+        return parts;
+    }
+
+    @Override
+    public List<Commit> listCommits(String repository, String branch, String earliest)
+    {
+        String[] parts = parseRepository(repository);
         String current = null;
         ImmutableList.Builder<Commit> commits = ImmutableList.builder();
         TypeReference<Map<String, Map<String, Map<String, Map<String, Map<String, CommitHistory>>>>>> returnType = new TypeReference<Map<String, Map<String, Map<String, Map<String, Map<String, CommitHistory>>>>>>() {};
 
         while (true) {
-            CommitHistory history = githubApi(format(LIST_COMMITS_QUERY, branch, current == null ? "null" : format("\"%s\"", current)), Optional.empty(), returnType)
+            CommitHistory history = githubApi(format(LIST_COMMITS_QUERY, parts[0], parts[1], branch, current == null ? "null" : format("\"%s\"", current)), Optional.empty(), returnType)
                     .get("data")
                     .get("repository")
                     .get("ref")
@@ -154,12 +169,24 @@ public class GithubGraphQlAction
     }
 
     @Override
-    public PullRequest createPullRequest(String branch, String title, String body)
+    public PullRequest createPullRequest(String repository, String baseRef, String headRef, String title, String body)
     {
+        String[] parts = parseRepository(repository);
+        TypeReference<Map<String, Map<String, Map<String, String>>>> repoIdType =
+                new TypeReference<Map<String, Map<String, Map<String, String>>>>() {};
+
+        String repoId = githubApi(
+                String.format(GET_REPOSITORY_ID_QUERY, parts[0], parts[1]),
+                Optional.empty(),
+                repoIdType)
+                .get("data")
+                .get("repository")
+                .get("id");
+
         Map<String, Object> pullRequestVariable = ImmutableMap.<String, Object>builder()
-                .put("repositoryId", PRESTO_REPOSITORY_ID)
-                .put("baseRefName", "master")
-                .put("headRefName", format("%s:%s", user, branch))
+                .put("repositoryId", repoId)
+                .put("baseRefName", baseRef)
+                .put("headRefName", headRef)
                 .put("clientMutationId", randomUUID())
                 .put("maintainerCanModify", false)
                 .put("title", title)

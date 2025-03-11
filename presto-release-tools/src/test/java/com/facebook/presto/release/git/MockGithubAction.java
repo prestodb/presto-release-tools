@@ -23,6 +23,8 @@ public class MockGithubAction
         implements GithubAction
 {
     private final List<Commit> commits;
+    private String pullRequestRepository;
+    private String listCommitsRepository;
     private PullRequest pullRequest;
 
     public MockGithubAction(List<Commit> commits)
@@ -31,14 +33,16 @@ public class MockGithubAction
     }
 
     @Override
-    public List<Commit> listCommits(String latest, String earliest)
+    public List<Commit> listCommits(String repository, String latest, String earliest)
     {
+        this.listCommitsRepository = repository;
         return commits;
     }
 
     @Override
-    public PullRequest createPullRequest(String branch, String title, String body)
+    public PullRequest createPullRequest(String repository, String baseRef, String headRef, String title, String body)
     {
+        this.pullRequestRepository = repository;
         checkState(pullRequest == null, "Can only create one pull request");
         pullRequest = new PullRequest(0, title, "", body, new Actor("test"), null);
         return pullRequest;
@@ -47,5 +51,15 @@ public class MockGithubAction
     public PullRequest getCreatedPullRequest()
     {
         return pullRequest;
+    }
+
+    public String getPullRequestRepository()
+    {
+        return pullRequestRepository;
+    }
+
+    public String getListCommitsRepository()
+    {
+        return listCommitsRepository;
     }
 }

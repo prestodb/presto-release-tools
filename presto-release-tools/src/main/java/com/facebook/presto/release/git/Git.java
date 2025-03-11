@@ -46,5 +46,7 @@ public interface Git
 
     String status(String... options);
 
+    String remoteUrl(String remote);
+
     List<String> tag();
 }

@@ -71,6 +71,19 @@ public class TestGenerateReleaseNotesTask
         {
             return "96d1a0420c46ed6a2442a3598dad5e7c9599e9c1\neacf13484139a85c53901f2045578c659a65a5b2";
         }
+
+        @Override
+        public String remoteUrl(String remote)
+        {
+            switch (remote) {
+                case "upstream":
+                    return "https://github.com/org/presto.git";
+                case "origin":
+                    return "https://github.com/user/presto.git";
+                default:
+                    return super.remoteUrl(remote);
+            }
+        }
     }
 
     private static final String RESOURCE_DIRECTORY = "release-notes-test";
@@ -134,6 +147,8 @@ public class TestGenerateReleaseNotesTask
         assertEquals(asCharSource(releaseNotesListFile, UTF_8).read(), getTestResourceContent("release_expected.rst"));
         assertEquals(asCharSource(releaseNotesFile, UTF_8).read(), getTestResourceContent("release-0.231_expected.rst"));
         assertEquals(githubAction.getCreatedPullRequest().getDescription().trim(), getTestResourceContent("description_expected.txt").trim());
+        assertEquals(githubAction.getPullRequestRepository(), "org/presto");
+        assertEquals(githubAction.getListCommitsRepository(), "org/presto");
     }
 
     private GenerateReleaseNotesTask initializeTask(List<Commit> commits)
