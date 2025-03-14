@@ -76,13 +76,6 @@ jobs:
           git log --pretty="format:%ce: %s" -4
           cat ~/.m2/settings.xml
           cd presto-release-tools
-          mvn javadoc:jar package gpg:sign 
-
-          for file in target/*.jar; do
-            echo "Verifying signature for $file"
-            gpg --verify "$file.asc" "$file"
-          done
-
           mvn deploy -Pdeploy-to-ossrh
           cd ..
         env:
