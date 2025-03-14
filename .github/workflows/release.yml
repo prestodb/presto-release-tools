@@ -36,7 +36,6 @@ jobs:
           server-username: NEXUS_USERNAME
           server-password: NEXUS_PASSWORD
           gpg-private-key: ${{ secrets.GPG_SECRET }}
-          gpg-passphrase: ${{ secrets.GPG_PASSPHRASE }}
 
       - name: Set up git
         run: |
@@ -77,11 +76,19 @@ jobs:
           git log --pretty="format:%ce: %s" -4
           cat ~/.m2/settings.xml
           cd presto-release-tools
-          mvn package gpg:sign deploy -Pdeploy-to-ossrh
+          mvn javadoc:jar package gpg:sign 
+
+          for file in target/*.jar; do
+            echo "Verifying signature for $file"
+            gpg --verify "$file.asc" "$file"
+          done
+
+          mvn deploy -Pdeploy-to-ossrh
           cd ..
         env:
           NEXUS_USERNAME: "${{ secrets.NEXUS_USERNAME }}"
           NEXUS_PASSWORD: "${{ secrets.NEXUS_PASSWORD }}"
+          GPG_PASSPHRASE: "${{ secrets.GPG_PASSPHRASE }}"
 
       - name: Push changes and tags
         run: |
