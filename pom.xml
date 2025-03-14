@@ -10,7 +10,7 @@
 
     <groupId>com.facebook.presto</groupId>
     <artifactId>presto-release-tools-root</artifactId>
-    <version>0.9-SNAPSHOT</version>
+    <version>0.9</version>
     <packaging>pom</packaging>
 
     <name>presto-release-tools-root</name>
@@ -28,7 +28,7 @@
     <scm>
         <connection>scm:git:git://github.com/prestodb/presto-release-tools.git</connection>
         <url>https://github.com/prestodb/presto-release-tools</url>
-        <tag>HEAD</tag>
+        <tag>0.9</tag>
     </scm>
 
     <properties>
