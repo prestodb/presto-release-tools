@@ -83,10 +83,10 @@ public class GenerateReleaseNotesTask
     public static final String RELEASE_NOTES_LIST_FILE = "presto-docs/src/main/sphinx/release.rst";
 
     private static final Pattern IGNORED_COMMITS_PATTERN = Pattern.compile("\\[maven-release-plugin]|add release note(s)? for|prepare for next development iteration", CASE_INSENSITIVE);
-    private static final Pattern NO_RELEASE_NOTE_PATTERN = Pattern.compile("== no release note(s)? ==", CASE_INSENSITIVE);
-    private static final Pattern RELEASE_NOTE_PATTERN = Pattern.compile("== release note(s)? ==\\w*(.*)$", CASE_INSENSITIVE + MULTILINE + DOTALL);
-    private static final Pattern HEADER_PATTERN = Pattern.compile("(.*) change(s)$", CASE_INSENSITIVE);
-    private static final Pattern KNOWN_HEADER_PATTERN = Pattern.compile("(general|security|jdbc driver|web ui|.* connector|verifier|resource groups|spi)$", CASE_INSENSITIVE);
+    protected static final Pattern NO_RELEASE_NOTE_PATTERN = Pattern.compile("== no release note(s)? ==", CASE_INSENSITIVE);
+    protected static final Pattern RELEASE_NOTE_PATTERN = Pattern.compile("== release note(s)? ==\\w*(.*)$", CASE_INSENSITIVE + MULTILINE + DOTALL);
+    protected static final Pattern HEADER_PATTERN = Pattern.compile("(.*) change(s)$", CASE_INSENSITIVE);
+    protected static final Pattern KNOWN_HEADER_PATTERN = Pattern.compile("(general|security|jdbc driver|web ui|.* connector|.* plugin|verifier|resource groups|spi)$", CASE_INSENSITIVE);
     private static final Pattern DASHES = Pattern.compile("-+$");
 
     private final Git git;
@@ -145,7 +145,7 @@ public class GenerateReleaseNotesTask
                 .distinct()
                 .collect(toImmutableList());
         Map<PullRequest, Optional<List<ReleaseNoteItem>>> releaseNoteItems = pullRequests.stream()
-                .collect(toImmutableMap(identity(), this::extractReleaseNotes));
+                .collect(toImmutableMap(identity(), GenerateReleaseNotesTask::extractReleaseNotes));
 
         log.info("Collecting author information");
         Map<String, String> userByLogin = new HashMap<>();
@@ -198,14 +198,16 @@ public class GenerateReleaseNotesTask
         EXPECT_LINE,
     }
 
-    private Optional<List<ReleaseNoteItem>> extractReleaseNotes(PullRequest pullRequest)
+    public static Optional<List<ReleaseNoteItem>> extractReleaseNotes(PullRequest pullRequest)
     {
         if (NO_RELEASE_NOTE_PATTERN.matcher(pullRequest.getDescription()).find()) {
+            log.info("pull request description matches with no release note pattern");
             return Optional.of(ImmutableList.of());
         }
 
         Matcher matcher = RELEASE_NOTE_PATTERN.matcher(pullRequest.getDescription() + "\n");
         if (!matcher.find()) {
+            log.warn("Pull request description does not match release note pattern");
             return Optional.empty();
         }
 
@@ -271,7 +273,7 @@ public class GenerateReleaseNotesTask
         return Optional.of(releaseNoteItems.build());
     }
 
-    private Optional<String> extractSection(String line)
+    private static Optional<String> extractSection(String line)
     {
         Matcher matcher = HEADER_PATTERN.matcher(line);
         if (matcher.matches()) {
@@ -453,7 +455,7 @@ public class GenerateReleaseNotesTask
         }
     }
 
-    private static class ReleaseNoteItem
+    public static class ReleaseNoteItem
     {
         private static final Set<String> ALL_UPPER_WORDS = ImmutableSet.of("jdbc", "spi", "ui");
 
@@ -501,6 +503,12 @@ public class GenerateReleaseNotesTask
                 }
             }
             return formatted.toString();
+        }
+
+        @Override
+        public String toString()
+        {
+            return this.section + ":" + this.line;
         }
     }
 

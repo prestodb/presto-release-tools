@@ -13,7 +13,7 @@
 
 # Extracted Release Notes
 - #1 (Author: A Brown): release notes 1
-  - Change ``storage.data-directory` from path to URI. For existing deployment on local flash, a scheme header "file://" should be added to the original config value.
+  - Improve ``storage.data-directory` type. Changes the type from path to URI. For existing deployment on local flash, a scheme header "file://" should be added to the original config value.
   - Rename error code from ``RAPTOR_LOCAL_FILE_SYSTEM_ERROR`` to ``RAPTOR_FILE_SYSTEM_ERROR``.
   - Fix an issue where DATE_TRUNC may produce incorrect results at certain timestamp in America/Sao_Paulo.
   - Replace the ``SchemaTableName`` parameter in ``ConnectorMetadata#createView`` with a ``ConnectorTableMetadata``.
@@ -21,7 +21,7 @@
   - Improve correctness check for RowType columns. Add specific validation checks for the individual fields when validating a row column.
   - Remove unused FilterVoidLambda interface in ArrayFilterFunction.
   - Add table_supports_delta_delete property in Raptor to allow deletion happening in background. DELETE queries in Raptor can now delete data logically but relying on compactors to delete physical data.
-  - Change ``ConnectorMetadata#commitPartition`` into async operation, and rename it to ``ConnectorMetadata#commitPartitionAsync``.
+  - Improve the ``ConnectorMetadata#commitPartition`` operation. Change it into an async operation, and rename it to ``ConnectorMetadata#commitPartitionAsync``.
 
 # All Commits
 - aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa01 release notes 1 - commit #1 (A Brown)

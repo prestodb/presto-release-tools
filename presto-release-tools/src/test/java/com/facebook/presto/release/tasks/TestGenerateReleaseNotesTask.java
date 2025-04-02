@@ -200,7 +200,7 @@ public class TestGenerateReleaseNotesTask
         return Resources.getResource(Paths.get(RESOURCE_DIRECTORY, path).toString());
     }
 
-    private static String getTestResourceContent(String... path)
+    public static String getTestResourceContent(String... path)
             throws IOException
     {
         return Resources.toString(getTestResource(path), UTF_8);

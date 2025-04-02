@@ -13,6 +13,7 @@
  */
 package com.facebook.presto.release;
 
+import com.facebook.presto.release.tasks.CheckReleaseNotesCommand;
 import com.facebook.presto.release.tasks.CutReleaseCommand;
 import com.facebook.presto.release.tasks.FinalizeReleaseCommand;
 import com.facebook.presto.release.tasks.GenerateReleaseNotesCommand;
@@ -35,6 +36,7 @@ public class PrestoReleaseService
                 .withDefaultCommand(Help.class)
                 .withCommand(Help.class)
                 .withCommand(GenerateReleaseNotesCommand.class)
+                .withCommand(CheckReleaseNotesCommand.class)
                 .withCommand(CutReleaseCommand.class)
                 .withCommand(FinalizeReleaseCommand.class)
                 .build();
