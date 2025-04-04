@@ -75,9 +75,7 @@ jobs:
           git checkout ${{ env.RELEASE_VERSION }}
           git log --pretty="format:%ce: %s" -4
           cat ~/.m2/settings.xml
-          cd presto-release-tools
           mvn deploy -Pdeploy-to-ossrh
-          cd ..
         env:
           NEXUS_USERNAME: "${{ secrets.NEXUS_USERNAME }}"
           NEXUS_PASSWORD: "${{ secrets.NEXUS_PASSWORD }}"
