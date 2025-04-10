@@ -28,10 +28,10 @@ import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
-import java.util.regex.Pattern;
 
 import static com.facebook.presto.release.tasks.GenerateReleaseNotesTask.NO_RELEASE_NOTE_PATTERN;
 import static com.facebook.presto.release.tasks.GenerateReleaseNotesTask.RELEASE_NOTE_PATTERN;
+import static com.facebook.presto.release.tasks.GenerateReleaseNotesTask.VALID_SECTION_HEADERS;
 import static com.facebook.presto.release.tasks.GenerateReleaseNotesTask.extractReleaseNotes;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.io.ByteStreams.toByteArray;
@@ -44,21 +44,6 @@ public class CheckReleaseNotesTask
 {
     private static final Logger log = Logger.get(CheckReleaseNotesTask.class);
 
-    private static final List<Pattern> VALID_SECTION_REGEXES = ImmutableList.of(
-                    "^General.*",
-                    "^Prestissimo (Native Execution)",
-                    "^Security.*",
-                    "^JDBC.*",
-                    "^Web UI.*",
-                    ".* Connector.*",
-                    ".* Plugin.*",
-                    "^Verifier.*",
-                    "^SPI.*",
-                    "^Resource Groups.*",
-                    "^Documentation.*")
-            .stream().map(Pattern::compile)
-            .collect(toImmutableList());
-
     private static final List<String> VALID_STARTING_VERBS = ImmutableList.of(
             "Fix",
             "Improve",
@@ -67,7 +52,9 @@ public class CheckReleaseNotesTask
             "Rename",
             "Remove",
             "Upgrade",
-            "Downgrade");
+            "Downgrade",
+            "Update",
+            "Deprecate");
 
     private final String releaseNoteSectionTemplate;
 
@@ -131,8 +118,8 @@ public class CheckReleaseNotesTask
     public List<Exception> verifyReleaseNoteItem(ReleaseNoteItem item)
     {
         return ImmutableList.<Optional<Exception>>builder()
-                .add(verify(VALID_SECTION_REGEXES.stream().anyMatch(pattern -> pattern.matcher(item.getSection()).find()),
-                        format("The release note section '%s' must match one of the valid regex patterns: %s", item.getSection(), Joiner.on(",").join(VALID_SECTION_REGEXES))))
+                .add(verify(VALID_SECTION_HEADERS.stream().anyMatch(pattern -> pattern.matcher(item.getSection()).find()),
+                        format("The release note section '%s' must match one of the valid regex patterns: %s", item.getSection(), Joiner.on(",").join(VALID_SECTION_HEADERS))))
                 .add(verify(VALID_STARTING_VERBS.stream().anyMatch(verb -> item.getLine().toLowerCase(ENGLISH).startsWith(verb.toLowerCase(ENGLISH))),
                         format("The release note line '%s' must start with one of the valid verbs: %s", item.getLine(), Joiner.on(",").join(VALID_STARTING_VERBS))))
                 .build()

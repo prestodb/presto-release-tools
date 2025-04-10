@@ -86,7 +86,20 @@ public class GenerateReleaseNotesTask
     protected static final Pattern NO_RELEASE_NOTE_PATTERN = Pattern.compile("== no release note(s)? ==", CASE_INSENSITIVE);
     protected static final Pattern RELEASE_NOTE_PATTERN = Pattern.compile("== release note(s)? ==\\w*(.*)$", CASE_INSENSITIVE + MULTILINE + DOTALL);
     protected static final Pattern HEADER_PATTERN = Pattern.compile("(.*) change(s)$", CASE_INSENSITIVE);
-    protected static final Pattern KNOWN_HEADER_PATTERN = Pattern.compile("(general|security|jdbc driver|web ui|.* connector|.* plugin|verifier|resource groups|spi)$", CASE_INSENSITIVE);
+    public static final List<Pattern> VALID_SECTION_HEADERS = ImmutableList.of(
+                    "^General.*",
+                    "^Prestissimo (Native Execution)",
+                    "^Security.*",
+                    "^JDBC.*",
+                    ".* Connector.*",
+                    "^Web UI.*",
+                    "^Verifier.*",
+                    "SPI",
+                    ".* Plugin.*",
+                    "^Resource Groups.*",
+                    "^Documentation.*")
+            .stream().map(header -> Pattern.compile(header, CASE_INSENSITIVE))
+            .collect(toImmutableList());
     private static final Pattern DASHES = Pattern.compile("-+$");
 
     private final Git git;
@@ -280,12 +293,10 @@ public class GenerateReleaseNotesTask
             return Optional.of(matcher.group(1).toLowerCase(ENGLISH));
         }
 
-        matcher = KNOWN_HEADER_PATTERN.matcher(line);
-        if (matcher.matches()) {
-            return Optional.of(line);
-        }
-
-        return Optional.empty();
+        return VALID_SECTION_HEADERS.stream().map(pattern -> pattern.matcher(line))
+                .filter(Matcher::matches)
+                .map(unused -> line)
+                .findFirst();
     }
 
     private String generateReleaseNotes(
@@ -424,17 +435,6 @@ public class GenerateReleaseNotesTask
     public static class CategoryComparator
             implements Comparator<String>
     {
-        private static final List<Pattern> CATEGORY_ORDERS = ImmutableList.<Pattern>builder()
-                .add(Pattern.compile("General"))
-                .add(Pattern.compile("Security"))
-                .add(Pattern.compile("JDBC Driver"))
-                .add(Pattern.compile(".* Connector"))
-                .add(Pattern.compile("Web UI"))
-                .add(Pattern.compile("Verifier"))
-                .add(Pattern.compile("Resource Groups"))
-                .add(Pattern.compile("SPI"))
-                .build();
-
         @Override
         public int compare(String category1, String category2)
         {
@@ -448,10 +448,10 @@ public class GenerateReleaseNotesTask
 
         private int getCategoryOrder(String category)
         {
-            return IntStream.range(0, CATEGORY_ORDERS.size())
-                    .filter(i -> CATEGORY_ORDERS.get(i).matcher(category).matches())
+            return IntStream.range(0, VALID_SECTION_HEADERS.size())
+                    .filter(i -> VALID_SECTION_HEADERS.get(i).matcher(category).matches())
                     .findFirst()
-                    .orElse(CATEGORY_ORDERS.size());
+                    .orElse(VALID_SECTION_HEADERS.size());
         }
     }
 
