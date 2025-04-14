@@ -89,15 +89,15 @@ public class GenerateReleaseNotesTask
     public static final List<Pattern> VALID_SECTION_HEADERS = ImmutableList.of(
                     "^General.*",
                     "^Prestissimo (Native Execution)",
-                    "^Security.*",
-                    "^JDBC.*",
-                    ".* Connector.*",
-                    "^Web UI.*",
-                    "^Verifier.*",
-                    "SPI",
-                    ".* Plugin.*",
-                    "^Resource Groups.*",
-                    "^Documentation.*")
+                    "^Security",
+                    "^JDBC Driver",
+                    "^Web UI",
+                    ".* Connector",
+                    "^Verifier",
+                    "^Resource Groups",
+                    "^SPI",
+                    ".* Plugin",
+                    "^Documentation")
             .stream().map(header -> Pattern.compile(header, CASE_INSENSITIVE))
             .collect(toImmutableList());
     private static final Pattern DASHES = Pattern.compile("-+$");
