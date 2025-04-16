@@ -88,7 +88,7 @@ public class GenerateReleaseNotesTask
     protected static final Pattern HEADER_PATTERN = Pattern.compile("(.*) change(s)$", CASE_INSENSITIVE);
     public static final List<Pattern> VALID_SECTION_HEADERS = ImmutableList.of(
                     "^General.*",
-                    "^Prestissimo (Native Execution)",
+                    "^Prestissimo \\(Native Execution\\)",
                     "^Security",
                     "^JDBC Driver",
                     "^Web UI",
