@@ -1,0 +1,22 @@
+Description
+Add a github action to enforce adding release notes and that they follow our documentation guidelines.
+Motivation and Context
+Significantly reduces work required in the release process, allowing us to adopt a faster release cadence
+Impact
+N/A
+Test Plan
+N/A
+Contributor checklist
+
+ Please make sure your submission complies with our contributing guide, in particular code style and commit standards.
+ PR description addresses the issue accurately and concisely.  If the change is non-trivial, a GitHub Issue is referenced.
+ Documented new properties (with its default value), SQL syntax, functions, or other functionality.
+ If release notes are required, they follow the release notes guidelines.
+ Adequate tests were added if applicable.
+ CI passed.
+
+Release Notes
+== RELEASE NOTES ==
+
+Prestissimo (Native Execution) Changes
+* Improve error handling of INTERVAL DAY, INTERVAL HOUR, and INTERVAL SECOND operators when experiencing overflows.
