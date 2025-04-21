@@ -23,6 +23,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 import static com.facebook.presto.release.tasks.TestGenerateReleaseNotesTask.getTestResourceContent;
+import static java.lang.String.format;
 import static org.testng.Assert.fail;
 
 public class TestCheckReleaseNotesTask
@@ -33,6 +34,7 @@ public class TestCheckReleaseNotesTask
             .put("missing_section_header_1.txt", false)
             .put("missing_section_header_2.txt", false)
             .put("missing_section_header_3.txt", false)
+            .put("prestissimo_header.txt", true)
             .put("no_release_note.txt", true)
             .put("no_release_notes.txt", true)
             .put("release_notes_1.txt", true)
@@ -67,6 +69,31 @@ public class TestCheckReleaseNotesTask
         }
     }
 
+    @DataProvider(name = "validSectionHeaders")
+    public Object[][] sectionHeaders()
+    {
+        return new Object[][] {
+                {"General"},
+                {"Prestissimo (Native Execution)"},
+                {"Security"},
+                {"JDBC Driver"},
+                {"Web UI"},
+                {"Sample Connector"},
+                {"Verifier"},
+                {"Resource Groups"},
+                {"SPI"},
+                {"Sample Plugin"},
+                {"Documentation"},
+        };
+    }
+
+    @Test(dataProvider = "validSectionHeaders")
+    public void testValidReleaseNoteSections(String header)
+    {
+        String prDescription = format("== RELEASE NOTES ==\n\n%s\n* Add a change", header);
+        checkReleaseNotesTask.checkReleaseNotes(prDescription);
+    }
+
     @DataProvider(name = "releaseNotesFailures")
     public Object[][] releaseNotesFailures()
             throws IOException
@@ -91,12 +118,12 @@ public class TestCheckReleaseNotesTask
                 {"== RELEASE NOTES ==\n\nGeneral Changes\n* Add test a thing\n\nSNI changes\n* Add an SPI thing"},
                 // multiple sections one invalid release note verb
                 {"== RELEASE NOTES ==\n\nGeneral Changes\n* Add test a thing\n\nSPI changes\n* bump version of an SPI thing"},
+                {"== RELEASE NOTES ==\n\nPrestissimo Native Execution Changes\n* Add test a thing\n\nSPI changes\n* bump version of an SPI thing"},
         };
     }
 
     @Test(expectedExceptions = RuntimeException.class, dataProvider = "releaseNotesFailures")
     public void testInvalidReleaseNotes(String notes)
-            throws IOException
     {
         checkReleaseNotesTask.checkReleaseNotes(notes);
     }
