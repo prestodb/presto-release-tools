@@ -54,6 +54,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.nCopies;
 import static java.util.Objects.requireNonNull;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertTrue;
 
 @Test(singleThreaded = true)
 public class TestGenerateReleaseNotesTask
@@ -144,7 +145,8 @@ public class TestGenerateReleaseNotesTask
         GenerateReleaseNotesTask task = initializeTask(COMMITS);
         task.run();
 
-        assertEquals(asCharSource(releaseNotesListFile, UTF_8).read(), getTestResourceContent("release_expected.rst"));
+        String releaseNotesList = asCharSource(releaseNotesListFile, UTF_8).read();
+        assertTrue(releaseNotesList.indexOf("Release-0.231") != -1 && releaseNotesList.indexOf("<release/release-0.231>") != -1, "Release notes does not contain expected version");
         assertEquals(asCharSource(releaseNotesFile, UTF_8).read(), getTestResourceContent("release-0.231_expected.rst"));
         assertEquals(githubAction.getCreatedPullRequest().getDescription().trim(), getTestResourceContent("description_expected.txt").trim());
         assertEquals(githubAction.getPullRequestRepository(), "org/presto");

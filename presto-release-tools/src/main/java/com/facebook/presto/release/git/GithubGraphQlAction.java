@@ -15,12 +15,12 @@ package com.facebook.presto.release.git;
 
 import com.facebook.airlift.http.client.HttpClient;
 import com.facebook.airlift.json.JsonCodec;
+import com.facebook.airlift.log.Logger;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.exc.MismatchedInputException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
@@ -48,6 +48,7 @@ import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 public class GithubGraphQlAction
         implements GithubAction
 {
+    private static final Logger log = Logger.get(GithubGraphQlAction.class);
     private static final URI GRAPHQL_API_URI = URI.create("https://api.github.com/graphql");
     private static final String LIST_COMMITS_QUERY = "{\n" +
             "    repository(owner: \"%s\", name: \"%s\") {\n" +
@@ -206,7 +207,7 @@ public class GithubGraphQlAction
                 .get("pullRequest");
     }
 
-    private <T> T githubApi(String query, Optional<String> variables, TypeReference<T> typeReference)
+    protected <T> T githubApi(String query, Optional<String> variables, TypeReference<T> typeReference)
     {
         String body = httpClient.execute(
                 preparePost()
@@ -220,23 +221,27 @@ public class GithubGraphQlAction
                 createStringResponseHandler()).getBody();
 
         try {
-            return new ObjectMapper().readValue(body, typeReference);
-        }
-        catch (MismatchedInputException e) {
-            try {
-                Map<String, Object> resp = new ObjectMapper().readValue(body, new TypeReference<Map<String, Object>>() {});
-                @SuppressWarnings("unchecked")
-                List<Map<String, Object>> errors = resp.get("errors") == null ? null : (List<Map<String, Object>>) resp.get("errors");
-                if (errors != null) {
-                    throw new RuntimeException("GraphQL error: " + errors);
-                }
-                else {
-                    throw new RuntimeException(e);
-                }
+            Map<String, Object> resp = new ObjectMapper().readValue(body, new TypeReference<Map<String, Object>>() {});
+
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> errors = resp.get("errors") == null ? null : (List<Map<String, Object>>) resp.get("errors");
+            if (errors != null && !errors.isEmpty()) {
+                throw new RuntimeException("GraphQL error: " + errors);
             }
-            catch (IOException errorInner) {
-                throw new RuntimeException(errorInner);
+
+            @SuppressWarnings("unchecked")
+            Map<String, Object> extensions = resp.get("extensions") == null ? null : (Map<String, Object>) resp.get("extensions");
+            if (extensions != null && extensions.containsKey("warnings")) {
+                Object warnings = extensions.get("warnings");
+                log.warn("GraphQL warnings: %s", warnings);
+                resp.remove("extensions");
             }
+
+            if (resp.containsKey("data")) {
+                return new ObjectMapper().convertValue(resp, typeReference);
+            }
+
+            throw new RuntimeException("GraphQL no data: " + body);
         }
         catch (IOException e) {
             throw new RuntimeException(e);

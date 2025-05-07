@@ -1,0 +1,16 @@
+{
+  "data": {
+    "createPullRequest": {
+      "pullRequest": {
+        "number": 12345,
+        "title": "Test PR Title",
+        "url": "https://github.com/test/repo/pull/12345",
+        "bodyText": "Test PR Body",
+        "author": {
+          "login": "testuser"
+        }
+      }
+    }
+  }
+}
+

@@ -1,0 +1,11 @@
+{
+  "errors": [
+    {
+      "type": "UNPROCESSABLE",
+      "path": ["createPullRequest"],
+      "locations": [{ "line": 2, "column": 3 }],
+      "message": "A pull request already exists for feature-branch into main."
+    }
+  ]
+}
+
