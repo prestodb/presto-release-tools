@@ -37,6 +37,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -421,7 +422,7 @@ public class GenerateReleaseNotesTask
             String gitDirectory = repository.getDirectory().getAbsolutePath();
             asCharSink(Paths.get(gitDirectory, format(RELEASE_NOTES_FILE, version)).toFile(), UTF_8).write(releaseNotes);
             List<String> lines = new LinkedList<>(asCharSource(Paths.get(gitDirectory, RELEASE_NOTES_LIST_FILE).toFile(), UTF_8).readLines());
-            lines.add(7, format("    release/release-%s", version));
+            lines.add(7, format("    Release-%s [%tF] <release/release-%s>", version, new Date(), version));
             asCharSink(Paths.get(gitDirectory, RELEASE_NOTES_LIST_FILE).toFile(), UTF_8).write(Joiner.on("\n").join(lines) + "\n");
         }
         catch (IOException e) {
