@@ -14,6 +14,7 @@
 package com.facebook.presto.release.git;
 
 import com.facebook.airlift.http.client.HttpClient;
+import com.facebook.airlift.http.client.StringResponseHandler.StringResponse;
 import com.facebook.airlift.json.JsonCodec;
 import com.facebook.airlift.log.Logger;
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -209,7 +210,7 @@ public class GithubGraphQlAction
 
     protected <T> T githubApi(String query, Optional<String> variables, TypeReference<T> typeReference)
     {
-        String body = httpClient.execute(
+        StringResponse response = httpClient.execute(
                 preparePost()
                         .setUri(GRAPHQL_API_URI)
                         .addHeader(CONTENT_TYPE, APPLICATION_JSON)
@@ -218,9 +219,15 @@ public class GithubGraphQlAction
                         .addHeader(USER_AGENT, "Presto")
                         .setBodyGenerator(jsonBodyGenerator(GraphQlQuery.CODEC, new GraphQlQuery(query, variables)))
                         .build(),
-                createStringResponseHandler()).getBody();
+                createStringResponseHandler());
+        int statusCode = response.getStatusCode();
+        if (statusCode >= 400) {
+            String statusMessage = response.getStatusMessage();
+            throw new RuntimeException("GraphQL request failed: " + statusCode + " " + statusMessage);
+        }
 
         try {
+            String body = response.getBody();
             Map<String, Object> resp = new ObjectMapper().readValue(body, new TypeReference<Map<String, Object>>() {});
 
             @SuppressWarnings("unchecked")
