@@ -38,22 +38,30 @@ public class TestGithubGraphQlAction
         return Resources.toString(Resources.getResource(Paths.get("git", path).toString()), UTF_8);
     }
 
-    private GithubGraphQlAction createMockAction(String...responseBodyItems)
+    private GithubGraphQlAction createMockAction(TestingResponse... responses)
     {
         final AtomicInteger responseIndex = new AtomicInteger(0);
         TestingHttpClient httpClient = new TestingHttpClient(request -> {
             int index = responseIndex.getAndIncrement();
-            String responseBody = responseBodyItems[index % responseBodyItems.length];
-            return new TestingResponse(
-                HttpStatus.OK,
-                ImmutableListMultimap.of("Content-Type", "application/json"),
-                responseBody.getBytes());
+            return responses[index % responses.length];
         });
         GithubConfig githubConfig = new GithubConfig()
                 .setUser("testUser")
                 .setAccessToken("testToken");
         GithubGraphQlAction githubAction = new GithubGraphQlAction(httpClient, githubConfig);
         return githubAction;
+    }
+
+    private GithubGraphQlAction createMockAction(String...responseBodyItems)
+    {
+        TestingResponse[] responses = new TestingResponse[responseBodyItems.length];
+        for (int i = 0; i < responseBodyItems.length; i++) {
+            responses[i] = new TestingResponse(
+                HttpStatus.OK,
+                ImmutableListMultimap.of("Content-Type", "application/json"),
+                responseBodyItems[i].getBytes());
+        }
+        return createMockAction(responses);
     }
 
     private GithubGraphQlAction createMockActionWithResources(String... responseFiles) throws IOException
@@ -63,6 +71,39 @@ public class TestGithubGraphQlAction
             responses[i] = getTestResourceContent(responseFiles[i]);
         }
         return createMockAction(responses);
+    }
+
+    @Test(expectedExceptions = RuntimeException.class, expectedExceptionsMessageRegExp = "GraphQL request failed: 429 Too Many Requests")
+    public void testHttpError429()
+    {
+        TestingResponse response = new TestingResponse(
+                HttpStatus.TOO_MANY_REQUESTS,
+                ImmutableListMultimap.of("Content-Type", "text/plain"),
+                "".getBytes());
+        GithubGraphQlAction action = createMockAction(response);
+        action.githubApi("query { test }", Optional.empty(), new TypeReference<String>() {});
+    }
+
+    @Test(expectedExceptions = RuntimeException.class, expectedExceptionsMessageRegExp = "GraphQL request failed: 400 Bad Request")
+    public void testHttpError400()
+    {
+        TestingResponse response = new TestingResponse(
+                HttpStatus.BAD_REQUEST,
+                ImmutableListMultimap.of("Content-Type", "text/plain"),
+                "".getBytes());
+        GithubGraphQlAction action = createMockAction(response);
+        action.githubApi("{ }", Optional.empty(), new TypeReference<String>() {});
+    }
+
+    @Test(expectedExceptions = RuntimeException.class, expectedExceptionsMessageRegExp = "GraphQL request failed: 500 Internal Server Error")
+    public void testHttpError500()
+    {
+        TestingResponse response = new TestingResponse(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                ImmutableListMultimap.of("Content-Type", "text/plain"),
+                "".getBytes());
+        GithubGraphQlAction action = createMockAction(response);
+        action.githubApi("{ }", Optional.empty(), new TypeReference<String>() {});
     }
 
     @Test
@@ -79,23 +120,16 @@ public class TestGithubGraphQlAction
         assertEquals(result.get("data"), ImmutableMap.of("test", "value"));
     }
 
-    @Test
+    @Test(expectedExceptions = RuntimeException.class, expectedExceptionsMessageRegExp = "GraphQL error: .*")
     public void testGithubApiError()
     {
         String errorResponse = "{\"errors\": [{\"message\": \"Test error\"}]}";
         GithubGraphQlAction action = createMockAction(errorResponse);
 
-        try {
-            action.githubApi(
-                    "query { test }",
-                    Optional.empty(),
-                    new TypeReference<Map<String, String>>() {});
-        }
-        catch (RuntimeException exception) {
-            assertEquals(exception.getMessage(), "GraphQL error: [{message=Test error}]");
-            return;
-        }
-        throw new AssertionError("Expected RuntimeException was not thrown");
+        action.githubApi(
+                "query { test }",
+                Optional.empty(),
+                new TypeReference<Map<String, String>>() {});
     }
 
     @Test
@@ -112,23 +146,16 @@ public class TestGithubGraphQlAction
         assertEquals(result.get("data"), ImmutableMap.of("test", "value"));
     }
 
-    @Test
+    @Test(expectedExceptions = RuntimeException.class, expectedExceptionsMessageRegExp = "GraphQL no data: .*")
     public void testGithubApiNoData()
     {
         String noDataResponse = "{\"extensions\": {\"warnings\": []}}";
         GithubGraphQlAction action = createMockAction(noDataResponse);
 
-        try {
-            action.githubApi(
-                    "query { test }",
-                    Optional.empty(),
-                    new TypeReference<Map<String, String>>() {});
-        }
-        catch (RuntimeException exception) {
-            assertEquals(exception.getMessage(), "GraphQL no data: {\"extensions\": {\"warnings\": []}}");
-            return;
-        }
-        throw new AssertionError("Expected RuntimeException was not thrown");
+        action.githubApi(
+                "query { test }",
+                Optional.empty(),
+                new TypeReference<Map<String, String>>() {});
     }
 
     @Test
