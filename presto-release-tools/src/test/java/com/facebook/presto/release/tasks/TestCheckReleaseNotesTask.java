@@ -76,6 +76,7 @@ public class TestCheckReleaseNotesTask
                 {"General"},
                 {"Prestissimo (Native Execution)"},
                 {"Security"},
+                {"Router"},
                 {"JDBC Driver"},
                 {"Web UI"},
                 {"Sample Connector"},
@@ -102,23 +103,22 @@ public class TestCheckReleaseNotesTask
                 // no edit to template
                 {Resources.toString(Resources.getResource("note_template.md"), StandardCharsets.UTF_8)},
                 // ambiguous, double release note blocks
-                {"== RELEASE NOTES ==\n changes\n* asdasd\n\n\n== NO RELEASE NOTES =="},
+                {"== RELEASE NOTES ==\n changes\n* Fix a thing\n\n\n== NO RELEASE NOTES =="},
                 // release note vs notes
-                {"== RELEASE NOTES ==\ngeneral\n* asd\n\n== RELEASE NOTE ==\ngeneral\n* asd"},
-                {"== RELEASE NOTES ==\ngeneral\n* asd\n\n== RELEASE NOTES ==\ngeneral\n* asd"},
+                {"== RELEASE NOTES ==\ngeneral\n* Fix a thing\n\n== RELEASE NOTE ==\ngeneral\n* Fix a thing"},
+                {"== RELEASE NOTES ==\ngeneral\n* Fix a thing\n\n== RELEASE NOTES ==\ngeneral\n* Fix a thing"},
                 // invalid section titles
-                {"== RELEASE NOTES ==\n\ngenerel chang\ntest"},
-                {"== RELEASE NOTES ==\n\ngeneral changes\ntest"},
-                {"== RELEASE NOTES ==\n\ncustom section\n* test"},
+                {"== RELEASE NOTES ==\n\ngenerel chang\n* Fix a thing"},
+                {"== RELEASE NOTES ==\n\ncustom changes\n* Fix a thing"},
                 // invalid note starts
                 {"== RELEASE NOTES ==\n\nGeneral Changes\n* test a thing"},
-                {"== RELEASE NOTES ==\n\nGeneral Changes\ntest a thing"},
-                {"== RELEASE NOTES ==\n\nGeneral Changes\n* Add test a thing\n* enhance a thing"},
+                {"== RELEASE NOTES ==\n\nGeneral Changes\nFix a thing"},
+                {"== RELEASE NOTES ==\n\nGeneral Changes\n* Fix a thing\n* enhance a thing"},
                 // multiple sections, one invalid section title
-                {"== RELEASE NOTES ==\n\nGeneral Changes\n* Add test a thing\n\nSNI changes\n* Add an SPI thing"},
+                {"== RELEASE NOTES ==\n\nGeneral Changes\n* Fix a thing\n\nSNI changes\n* Add an SPI thing"},
                 // multiple sections one invalid release note verb
-                {"== RELEASE NOTES ==\n\nGeneral Changes\n* Add test a thing\n\nSPI changes\n* bump version of an SPI thing"},
-                {"== RELEASE NOTES ==\n\nPrestissimo Native Execution Changes\n* Add test a thing\n\nSPI changes\n* bump version of an SPI thing"},
+                {"== RELEASE NOTES ==\n\nGeneral Changes\n* Fix a thing\n\nSPI changes\n* bump version of an SPI thing"},
+                {"== RELEASE NOTES ==\n\nPrestissimo Native Execution Changes\n* Fix a thing\n\nSPI changes\n* bump version of an SPI thing"},
         };
     }
 
