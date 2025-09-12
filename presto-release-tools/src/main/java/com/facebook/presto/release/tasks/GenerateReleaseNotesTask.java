@@ -90,6 +90,7 @@ public class GenerateReleaseNotesTask
     public static final List<Pattern> VALID_SECTION_HEADERS = ImmutableList.of(
                     "^General.*",
                     "^Prestissimo \\(Native Execution\\)",
+                    "^Router",
                     "^Security",
                     "^JDBC Driver",
                     "^Web UI",
