@@ -306,6 +306,7 @@ public class GenerateReleaseNotesTask
             Collection<String> contributors)
     {
         StringBuilder document = new StringBuilder(format("=============\nRelease %s\n=============\n\n", version.getVersion()));
+        document.append("**Breaking Changes**\n====================\n\n");
         document.append("**Highlights**\n==============\n\n");
         document.append("**Details**\n===========\n\n");
 
