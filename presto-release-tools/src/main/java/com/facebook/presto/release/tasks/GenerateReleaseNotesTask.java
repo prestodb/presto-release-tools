@@ -102,6 +102,7 @@ public class GenerateReleaseNotesTask
             .stream().map(header -> Pattern.compile(header, CASE_INSENSITIVE))
             .collect(toImmutableList());
     private static final Pattern DASHES = Pattern.compile("-+$");
+    private static final String RELEASE_NOTES_FOOTER = "\n\n## Release Notes\n```\n== NO RELEASE NOTE ==\n```";
 
     private final Git git;
     private final GitRepository repository;
@@ -200,8 +201,8 @@ public class GenerateReleaseNotesTask
                 upstreamRepo,
                 "master",
                 format("%s:%s", originRepo.split("/")[0], releaseNotesBranch),
-                format("Add release notes for %s", version.getVersion()),
-                releaseNotesSummary);
+                format("docs: Add release notes for %s", version.getVersion()),
+                releaseNotesSummary + RELEASE_NOTES_FOOTER);
         log.info("Release notes pull request created: %s", releaseNotesPullRequest.getUrl());
     }
 

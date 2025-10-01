@@ -148,6 +148,7 @@ public class TestGenerateReleaseNotesTask
         String releaseNotesList = asCharSource(releaseNotesListFile, UTF_8).read();
         assertTrue(releaseNotesList.indexOf("Release-0.231") != -1 && releaseNotesList.indexOf("<release/release-0.231>") != -1, "Release notes does not contain expected version");
         assertEquals(asCharSource(releaseNotesFile, UTF_8).read(), getTestResourceContent("release-0.231_expected.rst"));
+        assertEquals(githubAction.getCreatedPullRequest().getTitle(), "docs: Add release notes for 0.231");
         assertEquals(githubAction.getCreatedPullRequest().getDescription().trim(), getTestResourceContent("description_expected.txt").trim());
         assertEquals(githubAction.getPullRequestRepository(), "org/presto");
         assertEquals(githubAction.getListCommitsRepository(), "org/presto");

@@ -37,3 +37,8 @@
 - aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa11 missing section header 3 - commit #1 (A Brown)
 - aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa12 missing asterisk - commit #1 (E Fisher)
 - aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa13 disassociated commit - commit #1 (E Fisher)
+
+## Release Notes
+```
+== NO RELEASE NOTE ==
+```
