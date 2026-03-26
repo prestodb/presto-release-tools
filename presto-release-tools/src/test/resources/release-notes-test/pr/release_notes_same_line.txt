@@ -1,0 +1,5 @@
+== RELEASE NOTES == General changes
+* Add support for inline release notes
+
+Summary by Sourcery
+This should not be included in the release notes.

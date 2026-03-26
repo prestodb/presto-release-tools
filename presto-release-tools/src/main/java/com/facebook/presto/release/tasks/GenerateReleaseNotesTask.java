@@ -85,7 +85,10 @@ public class GenerateReleaseNotesTask
 
     private static final Pattern IGNORED_COMMITS_PATTERN = Pattern.compile("\\[maven-release-plugin]|add release note(s)? for|prepare for next development iteration", CASE_INSENSITIVE);
     protected static final Pattern NO_RELEASE_NOTE_PATTERN = Pattern.compile("== no release note(s)? ==", CASE_INSENSITIVE);
-    protected static final Pattern RELEASE_NOTE_PATTERN = Pattern.compile("== release note(s)? ==\\w*(.*)$", CASE_INSENSITIVE + MULTILINE + DOTALL);
+    // Matches release notes section and stops capturing before "Summary by" footer (added by bots like Sourcery)
+    // Pattern: "== release note(s)? ==" followed by optional whitespace and newline, then captures content
+    // until it encounters "\nSummary by" or reaches end of string
+    protected static final Pattern RELEASE_NOTE_PATTERN = Pattern.compile("== release note(s)? ==\\w*\\n?((?:(?!\\nSummary by).)*)", CASE_INSENSITIVE + MULTILINE + DOTALL);
     protected static final Pattern HEADER_PATTERN = Pattern.compile("(.*) change(s)$", CASE_INSENSITIVE);
     public static final List<Pattern> VALID_SECTION_HEADERS = ImmutableList.of(
                     "^General.*",

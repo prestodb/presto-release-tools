@@ -1,0 +1,17 @@
+Description
+This PR fixes a critical issue.
+
+Release Notes
+Please follow release notes guidelines and fill in the release notes below.
+
+== RELEASE NOTES ==
+
+General Changes
+* Fix listing tables after rename to return fresh table metadata.
+
+Summary by Sourcery
+
+Clean up stale MongoDB table metadata when listing tables.
+
+Bug Fixes:
+- Ensure getAllTables returns only existing MongoDB collections.
