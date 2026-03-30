@@ -7,6 +7,7 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
+    <name>presto-release-tools</name>
     <artifactId>presto-release-tools</artifactId>
     <description>Presto Release Tool</description>
 
