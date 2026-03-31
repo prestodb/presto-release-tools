@@ -192,7 +192,38 @@ public class GenerateReleaseNotesTask
 
         log.info("Generating release notes pull request");
         String releaseNotesBranch = "release-notes-" + version.getVersion();
-        createReleaseNotesCommit(version.getVersion(), releaseNotesBranch, releaseNotes);
+
+        // Create full summary with footer
+        String fullSummary = releaseNotesSummary + RELEASE_NOTES_FOOTER;
+
+        // Check if body exceeds GitHub's limit and handle accordingly
+        String prBody;
+        boolean summaryFileCreated = false;
+        final int githubPrBodyLimit = 65000; // Use 65000 to leave some buffer
+
+        if (fullSummary.length() > githubPrBodyLimit) {
+            log.info("PR body exceeds GitHub limit (%d chars), creating summary file", fullSummary.length());
+            summaryFileCreated = true;
+
+            // Create truncated version with reference to full file
+            String truncationMessage = format(
+                    "\n\n\n**Note:** The full release notes summary was too large (%d characters) for GitHub's PR body limit.\n" +
+                    "The complete summary has been saved to [`release-notes-missing-%s.md`](../blob/release-notes-%s/release-notes-missing-%s.md) in this pull request.\n" +
+                    "**Please delete this file before merging.**\n",
+                    fullSummary.length(),
+                    version.getVersion(),
+                    version.getVersion(),
+                    version.getVersion());
+
+            int availableSpace = Math.max(0, githubPrBodyLimit - truncationMessage.length() - RELEASE_NOTES_FOOTER.length() - 100);
+            String truncatedSummary = releaseNotesSummary.substring(0, Math.min(availableSpace, releaseNotesSummary.length()));
+            prBody = truncatedSummary + RELEASE_NOTES_FOOTER + truncationMessage;
+        }
+        else {
+            prBody = fullSummary;
+        }
+
+        createReleaseNotesCommit(version.getVersion(), releaseNotesBranch, releaseNotes, summaryFileCreated ? Optional.of(fullSummary) : Optional.empty());
         git.push(ORIGIN, releaseNotesBranch, false);
 
         String originName = repository.getOriginName();
@@ -205,7 +236,7 @@ public class GenerateReleaseNotesTask
                 "master",
                 format("%s:%s", originRepo.split("/")[0], releaseNotesBranch),
                 format("docs: Add release notes for %s", version.getVersion()),
-                releaseNotesSummary + RELEASE_NOTES_FOOTER);
+                prBody);
         log.info("Release notes pull request created: %s", releaseNotesPullRequest.getUrl());
     }
 
@@ -419,7 +450,7 @@ public class GenerateReleaseNotesTask
                         .collect(joining("\n"));
     }
 
-    private void createReleaseNotesCommit(String version, String branch, String releaseNotes)
+    private void createReleaseNotesCommit(String version, String branch, String releaseNotes, Optional<String> fullSummary)
     {
         git.checkout(Optional.empty(), Optional.of(branch));
 
@@ -429,6 +460,13 @@ public class GenerateReleaseNotesTask
             List<String> lines = new LinkedList<>(asCharSource(Paths.get(gitDirectory, RELEASE_NOTES_LIST_FILE).toFile(), UTF_8).readLines());
             lines.add(7, format("    Release-%s [%tF] <release/release-%s>", version, new Date(), version));
             asCharSink(Paths.get(gitDirectory, RELEASE_NOTES_LIST_FILE).toFile(), UTF_8).write(Joiner.on("\n").join(lines) + "\n");
+
+            // Write full summary to file if it was too large for PR body
+            if (fullSummary.isPresent()) {
+                String summaryFileName = format("release-notes-missing-%s.md", version);
+                asCharSink(Paths.get(gitDirectory, summaryFileName).toFile(), UTF_8).write(fullSummary.get());
+                log.info("Created full summary file: %s", summaryFileName);
+            }
         }
         catch (IOException e) {
             throw new RuntimeException(e);

@@ -75,7 +75,11 @@ jobs:
           git checkout ${{ env.RELEASE_VERSION }}
           git log --pretty="format:%ce: %s" -4
           cat ~/.m2/settings.xml
-          mvn deploy -Pdeploy-to-ossrh -DautoReleaseAfterClose=true
+          if [ "${{ vars.MOCK_PUBLISHING }}" = "true" ]; then
+            mvn deploy -Pdeploy-to-ossrh -DautoReleaseAfterClose=true || echo "Deploy failed but continuing due to MOCK_PUBLISHING=true"
+          else
+            mvn deploy -Pdeploy-to-ossrh -DautoReleaseAfterClose=true
+          fi
         env:
           NEXUS_USERNAME: "${{ secrets.NEXUS_USERNAME }}"
           NEXUS_PASSWORD: "${{ secrets.NEXUS_PASSWORD }}"
