@@ -111,6 +111,7 @@ public class TestGenerateReleaseNotesTask
             .addAll(createCommits("missing section header 3", USER1, USER1, true, 1))
             .addAll(createCommits("missing asterisk", USER3, USER2, true, 1))
             .addAll(createCommits("disassociated commit", USER3, USER2, false, 1))
+            .addAll(createCommits("release notes with differential revision", USER1, USER2, true, 1))
             .build();
 
     private File workingDirectory;

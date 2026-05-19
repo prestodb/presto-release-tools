@@ -22,6 +22,8 @@
   - Remove unused FilterVoidLambda interface in ArrayFilterFunction.
   - Add table_supports_delta_delete property in Raptor to allow deletion happening in background. DELETE queries in Raptor can now delete data logically but relying on compactors to delete physical data.
   - Improve the ``ConnectorMetadata#commitPartition`` operation. Change it into an async operation, and rename it to ``ConnectorMetadata#commitPartitionAsync``.
+- #10 (Author: A Brown): release notes with differential revision
+  - Fix an issue with query planning for certain join conditions.
 
 # All Commits
 - aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa01 release notes 1 - commit #1 (A Brown)
@@ -37,6 +39,7 @@
 - aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa11 missing section header 3 - commit #1 (A Brown)
 - aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa12 missing asterisk - commit #1 (E Fisher)
 - aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa13 disassociated commit - commit #1 (E Fisher)
+- aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa14 release notes with differential revision - commit #1 (A Brown)
 
 ## Release Notes
 ```

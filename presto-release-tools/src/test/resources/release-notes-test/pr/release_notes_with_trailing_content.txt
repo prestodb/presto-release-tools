@@ -5,9 +5,10 @@ Release Notes
 Please follow release notes guidelines and fill in the release notes below.
 
 == RELEASE NOTES ==
-
+```
 General Changes
 * Fix listing tables after rename to return fresh table metadata.
+```
 
 Summary by Sourcery
 

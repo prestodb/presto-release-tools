@@ -1,4 +1,5 @@
 == RELEASE NOTES ==
-
+```
 General Changes
 added configs to use common HTTPS settings for internal communications
+```

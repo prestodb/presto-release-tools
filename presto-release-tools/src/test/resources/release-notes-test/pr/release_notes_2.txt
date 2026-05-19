@@ -1,5 +1,5 @@
 == RELEASE NOTES ==
-
+```
 Raptor Plugin Changes
 --------------
 * Improve correctness check for RowType columns.
@@ -9,3 +9,4 @@ Raptor Plugin Changes
 SPI Changes
 -----------
 * Improve the ``ConnectorMetadata#commitPartition`` operation. Change it into an async operation, and rename it to ``ConnectorMetadata#commitPartitionAsync``
+```
