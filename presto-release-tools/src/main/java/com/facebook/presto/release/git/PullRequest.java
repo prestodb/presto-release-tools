@@ -35,7 +35,7 @@ public class PullRequest
             @JsonProperty("number") int id,
             @JsonProperty("title") String title,
             @JsonProperty("url") String url,
-            @JsonProperty("bodyText") String description,
+            @JsonProperty("body") String description,
             @JsonProperty("author") Actor author,
             @JsonProperty("mergedBy") User mergedBy)
     {

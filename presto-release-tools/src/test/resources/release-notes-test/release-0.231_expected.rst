@@ -11,6 +11,10 @@ Release 0.231
 **Details**
 ===========
 
+General Changes
+_______________
+* Fix an issue with query planning for certain join conditions. `#10 <https://github.com/prestodb/presto/pull/10>`_
+
 SPI Changes
 ___________
 * Improve the ``ConnectorMetadata#commitPartition`` operation. Change it into an async operation, and rename it to ``ConnectorMetadata#commitPartitionAsync``. `#2 <https://github.com/prestodb/presto/pull/2>`_

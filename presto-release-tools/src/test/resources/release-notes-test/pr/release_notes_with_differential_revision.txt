@@ -1,0 +1,7 @@
+== RELEASE NOTES ==
+```
+General Changes
+* Fix an issue with query planning for certain join conditions.
+```
+
+Differential Revision: D101554110

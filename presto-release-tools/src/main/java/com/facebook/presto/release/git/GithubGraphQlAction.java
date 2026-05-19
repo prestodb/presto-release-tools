@@ -73,7 +73,7 @@ public class GithubGraphQlAction
             "                                      number\n" +
             "                                      title\n" +
             "                                      url\n" +
-            "                                      bodyText\n" +
+            "                                      body\n" +
             "                                      author {\n" +
             "                                          login\n" +
             "                                      }\n" +
@@ -100,7 +100,7 @@ public class GithubGraphQlAction
             "            number\n" +
             "            title\n" +
             "            url\n" +
-            "            bodyText\n" +
+            "            body\n" +
             "            author {\n" +
             "                login\n" +
             "            }\n" +
