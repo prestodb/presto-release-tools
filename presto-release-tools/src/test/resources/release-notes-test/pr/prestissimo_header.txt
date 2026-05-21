@@ -16,8 +16,9 @@ Contributor checklist
  CI passed.
 
 Release Notes
-== RELEASE NOTES ==
 ```
+== RELEASE NOTES ==
+
 Prestissimo (Native Execution) Changes
 * Improve error handling of INTERVAL DAY, INTERVAL HOUR, and INTERVAL SECOND operators when experiencing overflows.
 ```

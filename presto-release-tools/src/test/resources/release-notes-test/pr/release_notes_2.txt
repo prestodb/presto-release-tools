@@ -1,5 +1,6 @@
-== RELEASE NOTES ==
 ```
+== RELEASE NOTES ==
+
 Raptor Plugin Changes
 --------------
 * Improve correctness check for RowType columns.
