@@ -1,0 +1,47 @@
+name: Docker Image Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Docker image tag to test'
+        required: false
+        default: 'latest'
+        type: string
+  workflow_call:
+    inputs:
+      image_tag:
+        description: 'Docker image tag to test'
+        required: false
+        default: 'latest'
+        type: string
+
+jobs:
+  test-docker-image:
+    runs-on: ubuntu-latest
+    env:
+      DOCKER_REGISTRY: ${{ vars.DOCKER_REGISTRY || github.repository_owner }}
+      PRESTO_VERSION: ${{ inputs.image_tag || 'latest' }}
+    
+    steps:
+      - name: Checkout test repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/presto-release-tools
+          ref: ${{ github.ref }}
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Display test configuration
+        run: |
+          echo "Running Docker image tests"
+          echo "Docker registry: $DOCKER_REGISTRY"
+          echo "Image tag: $PRESTO_VERSION"
+      
+      - name: Run Docker image tests
+        working-directory: docker-image-tests
+        run: |
+          chmod +x test.sh
+          ./test.sh
+   
