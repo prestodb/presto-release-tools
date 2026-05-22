@@ -1,5 +1,6 @@
-== RELEASE NOTES ==
 ```
+== RELEASE NOTES ==
+
 General changes
 * Add support for inline release notes
 ```

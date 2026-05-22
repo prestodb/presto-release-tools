@@ -1,0 +1,7 @@
+```
+   
+== RELEASE NOTES ==
+
+General Changes
+* Add a change with spaces before header
+```

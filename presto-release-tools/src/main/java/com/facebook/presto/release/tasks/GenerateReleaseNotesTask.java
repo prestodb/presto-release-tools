@@ -83,8 +83,8 @@ public class GenerateReleaseNotesTask
     public static final String RELEASE_NOTES_LIST_FILE = "presto-docs/src/main/sphinx/release.rst";
 
     private static final Pattern IGNORED_COMMITS_PATTERN = Pattern.compile("\\[maven-release-plugin]|add release note(s)? for|prepare for next development iteration", CASE_INSENSITIVE);
-    protected static final Pattern NO_RELEASE_NOTE_PATTERN = Pattern.compile("== no release note(s)? ==", CASE_INSENSITIVE);
-    protected static final Pattern RELEASE_NOTE_PATTERN = Pattern.compile("== release note(s)? ==\\s*```[^\\n]*\\n(.*?)\\s*```", CASE_INSENSITIVE | DOTALL);
+    protected static final Pattern NO_RELEASE_NOTE_PATTERN = Pattern.compile("```[^\\n]*\\s*== no release note(s)? ==\\s*```", CASE_INSENSITIVE | DOTALL);
+    protected static final Pattern RELEASE_NOTE_PATTERN = Pattern.compile("```[^\\n]*\\s*== release note(s)? ==\\s*\\n(.*?)\\s*```", CASE_INSENSITIVE | DOTALL);
     protected static final Pattern HEADER_PATTERN = Pattern.compile("(.*) change(s)$", CASE_INSENSITIVE);
     public static final List<Pattern> VALID_SECTION_HEADERS = ImmutableList.of(
                     "^General.*",

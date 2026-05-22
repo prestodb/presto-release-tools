@@ -1,5 +1,6 @@
-== RELEASE NOTES ==
 ```
+== RELEASE NOTES ==
+
 General Changes
 * Fix an issue with query planning for certain join conditions.
 ```

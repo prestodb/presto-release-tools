@@ -42,6 +42,10 @@ public class TestCheckReleaseNotesTask
             .put("release_notes_with_trailing_content.txt", true)
             .put("release_notes_same_line.txt", true)
             .put("release_notes_with_differential_revision.txt", true)
+            .put("release_notes_with_whitespace_before_header.txt", true)
+            .put("release_notes_with_spaces_before_header.txt", true)
+            .put("no_release_note_with_whitespace_before_header.txt", true)
+            .put("no_release_note_with_spaces_before_header.txt", true)
             .build();
 
     private CheckReleaseNotesTask checkReleaseNotesTask = new CheckReleaseNotesTask();
@@ -93,14 +97,14 @@ public class TestCheckReleaseNotesTask
     @Test(dataProvider = "validSectionHeaders")
     public void testValidReleaseNoteSections(String header)
     {
-        String prDescription = format("== RELEASE NOTES ==\n```\n%s\n* Add a change\n```", header);
+        String prDescription = format("```\n== RELEASE NOTES ==\n\n%s\n* Add a change\n```", header);
         checkReleaseNotesTask.checkReleaseNotes(prDescription);
     }
 
     @Test(dataProvider = "validSectionHeaders")
     public void testValidReleaseNoteSectionsWithLanguageSpecifier(String header)
     {
-        String prDescription = format("== RELEASE NOTES ==\n```markdown\n%s\n* Add a change\n```", header);
+        String prDescription = format("```markdown\n== RELEASE NOTES ==\n\n%s\n* Add a change\n```", header);
         checkReleaseNotesTask.checkReleaseNotes(prDescription);
     }
 
@@ -118,27 +122,29 @@ public class TestCheckReleaseNotesTask
                 // no edit to template
                 {Resources.toString(Resources.getResource("note_template.md"), StandardCharsets.UTF_8)},
                 // ambiguous, double release note blocks
-                {"== RELEASE NOTES ==\n```\n changes\n* asdasd\n```\n\n== NO RELEASE NOTES =="},
+                {"```\n== RELEASE NOTES ==\n\n changes\n* asdasd\n```\n\n```\n== NO RELEASE NOTES ==\n```"},
                 // release note vs notes
-                {"== RELEASE NOTES ==\n```\ngeneral\n* asd\n```\n\n== RELEASE NOTE ==\n```\ngeneral\n* asd\n```"},
-                {"== RELEASE NOTES ==\n```\ngeneral\n* asd\n```\n\n== RELEASE NOTES ==\n```\ngeneral\n* asd\n```"},
-                // unterminated code fence
-                {"== RELEASE NOTES ==\n```\nGeneral Changes\n* Add a change"},
+                {"```\n== RELEASE NOTES ==\n\ngeneral\n* asd\n```\n\n```\n== RELEASE NOTE ==\n\ngeneral\n* asd\n```"},
+                {"```\n== RELEASE NOTES ==\n\ngeneral\n* asd\n```\n\n```\n== RELEASE NOTES ==\n\ngeneral\n* asd\n```"},
+                // unterminated code fence for RELEASE NOTES
+                {"```\n== RELEASE NOTES ==\n\nGeneral Changes\n* Add a change"},
+                // unterminated code fence for NO RELEASE NOTES
+                {"```\n== NO RELEASE NOTES =="},
                 // invalid section titles
-                {"== RELEASE NOTES ==\n```\ngenerel chang\ntest\n```"},
+                {"```\n== RELEASE NOTES ==\n\ngenerel chang\ntest\n```"},
                 // invalid section title with language-specified code fence
-                {"== RELEASE NOTES ==\n```markdown\ngenerel chang\ntest\n```"},
-                {"== RELEASE NOTES ==\n```\ngeneral changes\ntest\n```"},
-                {"== RELEASE NOTES ==\n```\ncustom section\n* test\n```"},
+                {"```markdown\n== RELEASE NOTES ==\n\ngenerel chang\ntest\n```"},
+                {"```\n== RELEASE NOTES ==\n\ngeneral changes\ntest\n```"},
+                {"```\n== RELEASE NOTES ==\n\ncustom section\n* test\n```"},
                 // invalid note starts
-                {"== RELEASE NOTES ==\n```\nGeneral Changes\n* test a thing\n```"},
-                {"== RELEASE NOTES ==\n```\nGeneral Changes\ntest a thing\n```"},
-                {"== RELEASE NOTES ==\n```\nGeneral Changes\n* Add test a thing\n* enhance a thing\n```"},
+                {"```\n== RELEASE NOTES ==\n\nGeneral Changes\n* test a thing\n```"},
+                {"```\n== RELEASE NOTES ==\n\nGeneral Changes\ntest a thing\n```"},
+                {"```\n== RELEASE NOTES ==\n\nGeneral Changes\n* Add test a thing\n* enhance a thing\n```"},
                 // multiple sections, one invalid section title
-                {"== RELEASE NOTES ==\n```\nGeneral Changes\n* Add test a thing\n\nSNI changes\n* Add an SPI thing\n```"},
+                {"```\n== RELEASE NOTES ==\n\nGeneral Changes\n* Add test a thing\n\nSNI changes\n* Add an SPI thing\n```"},
                 // multiple sections one invalid release note verb
-                {"== RELEASE NOTES ==\n```\nGeneral Changes\n* Add test a thing\n\nSPI changes\n* bump version of an SPI thing\n```"},
-                {"== RELEASE NOTES ==\n```\nPrestissimo Native Execution Changes\n* Add test a thing\n\nSPI changes\n* bump version of an SPI thing\n```"},
+                {"```\n== RELEASE NOTES ==\n\nGeneral Changes\n* Add test a thing\n\nSPI changes\n* bump version of an SPI thing\n```"},
+                {"```\n== RELEASE NOTES ==\n\nPrestissimo Native Execution Changes\n* Add test a thing\n\nSPI changes\n* bump version of an SPI thing\n```"},
         };
     }
 
